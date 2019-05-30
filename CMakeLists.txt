@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.0)
+project(data_frame_prototype CXX)
+set(CMAKE_CXX_FLAGS "-std=c++17 ${CMAKE_CXX_FLAGS}")
+find_package(Boost REQUIRED)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS})
+endif()
