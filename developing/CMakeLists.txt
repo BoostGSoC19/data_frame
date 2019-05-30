@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.0)
+project(data_frame_developing CXX)
+set(CMAKE_CXX_FLAGS "-std=c++17 ${CMAKE_CXX_FLAGS}")
+find_package(Boost REQUIRED)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
+set(DF_SOURCE haha_test.cpp)
+add_executable(main ${DF_SOURCE})
+target_link_libraries(main ${Boost_LIBRARIES})
+# set(TYPE_SOURCE type_test.cpp)
+# add_executable(type ${TYPE_SOURCE})
