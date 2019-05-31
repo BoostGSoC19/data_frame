@@ -6,7 +6,7 @@ if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-set(DF_SOURCE haha_test.cpp)
+set(DF_SOURCE data_frame_v_0.2.cpp)
 add_executable(main ${DF_SOURCE})
 target_link_libraries(main ${Boost_LIBRARIES})
 # set(TYPE_SOURCE type_test.cpp)
