@@ -37,7 +37,7 @@ public:
         _m[col_name] = tmp;
     }
     template<typename T> 
-    void sort(std::string col_name) {
+    std::vector<int> sort(std::string col_name) {
         if (!_type_map.count(col_name)) return;
         if (typeid(T).name() != _type_map[col_name]) return;
         std::vector<int> tmp_index;
@@ -48,6 +48,7 @@ public:
             return new_col->_store[l] > new_col->_store[r];
         };
         std::sort(tmp_index.begin(), tmp_index.end(), cmp);
+        return tmp_index;
     }
 private:
     boost::numeric::ublas::vector<int> index;
