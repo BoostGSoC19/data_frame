@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <typeinfo>
+#include <algorithm>
 class col_base {
 
 };
@@ -42,11 +43,11 @@ public:
         std::vector<int> tmp_index;
         for (int i = 0; i < index.size(); i++)
             tmp_index.push_back(index[i]);
-        col<T>* new_col = dynamic_cast<col<T>>(_m[col_name]);
+        col<T>* new_col = reinterpret_cast<col<T>*>(_m[col_name]);
         auto cmp = [&](int& l, int& r) -> bool {
             return new_col->_store[l] > new_col->_store[r];
         };
-        sort(tmp_index.begin(), new_col->_store.end(), cmp);
+        std::sort(tmp_index.begin(), tmp_index.end(), cmp);
     }
 private:
     boost::numeric::ublas::vector<int> index;
@@ -71,5 +72,5 @@ int main() {
     df.add_cols<int>(int_cl.get_name(), int_cl);
     df.add_cols<double>(double_cl.get_name(), double_cl);
     df.add_cols<std::string>(string_cl.get_name(), string_cl);
-
+    df.sort<double>("double_vec");
 }
