@@ -38,8 +38,8 @@ public:
     }
     template<typename T> 
     std::vector<int> sort(std::string col_name) {
-        if (!_type_map.count(col_name)) return;
-        if (typeid(T).name() != _type_map[col_name]) return;
+        if (!_type_map.count(col_name)) return {};
+        if (typeid(T).name() != _type_map[col_name]) return {};
         std::vector<int> tmp_index;
         for (int i = 0; i < index.size(); i++)
             tmp_index.push_back(index[i]);
