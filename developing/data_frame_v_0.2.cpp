@@ -73,5 +73,5 @@ int main() {
     df.add_cols<int>(int_cl.get_name(), int_cl);
     df.add_cols<double>(double_cl.get_name(), double_cl);
     df.add_cols<std::string>(string_cl.get_name(), string_cl);
-    df.sort<double>("double_vec");
+    std::vector<int> order = df.sort<double>("double_vec");
 }
