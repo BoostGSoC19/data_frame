@@ -59,31 +59,60 @@ public:
     any information for other columns
     Another problem is when adding multiple rows, we need to provide information for each column. 
     */
-    template<class Tuple, std::size_t N>
-    struct some_class {
-        static void print(const Tuple& t, std::vector<std::string>& names) 
-        {
-            some_class<Tuple, N-1>::print(t, names);
-            std::cout << ", " << names[N-1] << ": "<< std::get<N-1>(t);
-        }
-    };
-    
-    template<class Tuple>
-    struct some_class<Tuple, 1> {
-        static void print(const Tuple& t, std::vector<std::string>& names) 
-        {
-            std::cout << names[0] << ": " << std::get<0>(t);
-        }
-    };
-    
-    template<class... Args>
-    void print_row(const std::tuple<Args...>& t, std::vector<std::string>& names) 
-    {
-        std::cout << "(";
-        some_class<decltype(t), sizeof...(Args)>::print(t, names);
-        std::cout << ")\n";
+    template<typename T>
+    void add_val(T val, std::string col_name) {
+        if (!_type_map.count(col_name)) return;
+        if (typeid(T).name() != _type_map[col_name]) return;
+        col<T>* new_col = reinterpret_cast<col<T>*>(_m[col_name]);
+        /* Need to resize _store within each col */
+        
+        int old_size = new_col->_store.size();
+        new_col->_store.resize(new_col->_store.size() + 1);
+        new_col->_store.insert_element(old_size, val);
     }
-    
+    template<int... Is>
+    struct seq { };
+
+    template<int N, int... Is>
+    struct gen_seq : gen_seq<N - 1, N - 1, Is...> { };
+
+    template<int... Is>
+    struct gen_seq<0, Is...> : seq<Is...> { };
+    template<typename T, typename F, int... Is>
+    void for_each(T&& t, F f, seq<Is...>, std::vector<std::string>& names)
+    {
+        auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
+    }
+    template<typename... Ts, typename F>
+    void for_each_in_tuple(std::tuple<Ts...> const& t, F f, std::vector<std::string>& names)
+    {
+        for_each(t, f, gen_seq<sizeof...(Ts)>(), names);
+    }
+    struct my_functor
+    {
+        my_functor(data_frame* df): df(df) {}
+        template<typename T>
+        void operator () (T t, std::string val)
+        {
+            df->add_val<T>(t, val);
+        }
+        data_frame* df;
+    };
+    template<class... Args>
+    void add_row(const std::tuple<Args...>& t, std::vector<std::string>& names) {
+        for_each_in_tuple(t, my_functor(this), names);
+    }
+
+    template<typename T> 
+    void print_col(std::string col_name) {
+        if (!_type_map.count(col_name)) return;
+        if (typeid(T).name() != _type_map[col_name]) return ;
+        col<T>* new_col = reinterpret_cast<col<T>*>(_m[col_name]);
+        for (int i = 0; i < new_col->_store.size(); i++) {
+            std::cout << new_col->_store[i] << "\n";
+        }
+        std::cout << std::endl;
+    }
 private:
     boost::numeric::ublas::vector<int> index;
     std::map<std::string, col_base*> _m;
@@ -102,7 +131,7 @@ int main() {
     
     boost::numeric::ublas::vector<std::string> string_vec(10);
     for (int i = 0; i < 10; i++)
-        string_vec[i] = std::to_string(i);
+        string_vec[i] = std::to_string(i * 100);
     col<std::string> string_cl("string_vec", string_vec);  
     
     data_frame df;
@@ -116,7 +145,10 @@ int main() {
     std::vector<int> order2 = df.sort<std::string>("string_vec");
     for (int i = 0; i < order2.size(); i++)
         std::cout << std::to_string(order2[i]) << std::endl;
-    std::tuple<int, std::string, float> t1(10, "Test", 3.14);
+    std::cout << "-----" << std::endl;   
+    std::tuple<int, std::string, double> t1(10, "Test", 3.14);
     std::vector<std::string> tmp({"int_vec", "string_vec", "double_vec"});
-    df.print_row(t1, tmp);
+    //df.print_row(t1, tmp);
+    df.add_row(t1, tmp);
+    df.print_col<std::string>("string_vec");
 }
