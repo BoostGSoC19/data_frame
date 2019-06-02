@@ -15,14 +15,23 @@ public:
     using Type = T;
     using Container = boost::numeric::ublas::vector<Type>;
     col() = default;
-    explicit col(std::string name, Container _store): col_name(name), _store(_store) {}
-    explicit col(std::pair<std::string, Container> _p): col_name(_p.first), _store(_p.second) {}
+    explicit col(std::string name, Container _store): col_name(name), _store(_store), curSize(_store.size()) {}
+    explicit col(std::pair<std::string, Container> _p): col_name(_p.first), _store(_p.second), curSize(_p.second.size()) {}
     explicit col(const Container& other) : _store(other) {}
     void set_name(std::string name) { col_name = name; }
     std::string get_name() {return col_name; }
+    int get_size() {return curSize; }
+    void add_element(T val) {
+        if (curSize >=  _store.size()) {
+            _store.resize(curSize * 2);
+        }
+        _store.insert_element(curSize, val);
+        curSize++;
+    }
 public:
     Container _store;
     std::string col_name;
+    int curSize;
 };
 class data_frame {
 public:
@@ -65,10 +74,7 @@ public:
         if (typeid(T).name() != _type_map[col_name]) return;
         col<T>* new_col = reinterpret_cast<col<T>*>(_m[col_name]);
         /* Need to resize _store within each col */
-        
-        int old_size = new_col->_store.size();
-        new_col->_store.resize(new_col->_store.size() + 1);
-        new_col->_store.insert_element(old_size, val);
+        new_col->add_element(val);
     }
     template<int... Is>
     struct seq { };
@@ -88,9 +94,9 @@ public:
     {
         for_each(t, f, gen_seq<sizeof...(Ts)>(), names);
     }
-    struct my_functor
+    struct tmp_functor
     {
-        my_functor(data_frame* df): df(df) {}
+        tmp_functor(data_frame* df): df(df) {}
         template<typename T>
         void operator () (T t, std::string val)
         {
@@ -100,18 +106,21 @@ public:
     };
     template<class... Args>
     void add_row(const std::tuple<Args...>& t, std::vector<std::string>& names) {
-        for_each_in_tuple(t, my_functor(this), names);
+        for_each_in_tuple(t, tmp_functor(this), names);
     }
-
+    template<class... Args>
+    void add_rows(const std::vector<std::tuple<Args...>>& t, std::vector<std::string>& names) {
+        for (int i = 0; i < t.size(); i++)
+            add_row(t[i], names);
+    }
     template<typename T> 
     void print_col(std::string col_name) {
         if (!_type_map.count(col_name)) return;
         if (typeid(T).name() != _type_map[col_name]) return ;
         col<T>* new_col = reinterpret_cast<col<T>*>(_m[col_name]);
-        for (int i = 0; i < new_col->_store.size(); i++) {
-            std::cout << new_col->_store[i] << "\n";
+        for (int i = 0; i < new_col->get_size(); i++) {
+            std::cout << new_col->_store[i] << std::endl;
         }
-        std::cout << std::endl;
     }
 private:
     boost::numeric::ublas::vector<int> index;
@@ -151,4 +160,12 @@ int main() {
     //df.print_row(t1, tmp);
     df.add_row(t1, tmp);
     df.print_col<std::string>("string_vec");
+    std::cout << "-----" << std::endl;   
+    std::vector<std::tuple<int, std::string, double>> t2{{10, "youtube", 3.14}, 
+                                                          {2, "twitter", 6.0}, 
+                                                          {4, "reddit", 7.24}};
+    df.add_rows(t2, tmp);
+    df.print_col<std::string>("string_vec");
+    std::cout << "-----" << std::endl;   
+    df.print_col<int>("int_vec");
 }
