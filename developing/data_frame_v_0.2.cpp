@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <tuple>
+#include <utility>
 class col_base {
 
 };
@@ -76,23 +77,15 @@ public:
         /* Need to resize _store within each col */
         new_col->add_element(val);
     }
-    template<int... Is>
-    struct seq { };
-
-    template<int N, int... Is>
-    struct gen_seq : gen_seq<N - 1, N - 1, Is...> { };
-
-    template<int... Is>
-    struct gen_seq<0, Is...> : seq<Is...> { };
-    template<typename T, typename F, int... Is>
-    void for_each(T&& t, F f, seq<Is...>, std::vector<std::string>& names)
+    template<typename T, typename F, std::size_t ... Is>
+    void for_each(T&& t, F f, std::index_sequence<Is...>, std::vector<std::string>& names)
     {
         auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
     }
     template<typename... Ts, typename F>
     void for_each_in_tuple(std::tuple<Ts...> const& t, F f, std::vector<std::string>& names)
     {
-        for_each(t, f, gen_seq<sizeof...(Ts)>(), names);
+        for_each(t, f, std::index_sequence_for<Ts...>{}, names);
     }
     struct tmp_functor
     {
