@@ -24,6 +24,26 @@ public:
         vals<T>[this] = store_type<T>(len);
         for (int i = 0; i < len; i++) vals<T>[this][i] = other[i];
     }
+    template<typename T> 
+    int getSize() {
+        if (vals<T>.count(this))
+            return vals<T>[this].size();
+        else return 0;
+    }
+    template<typename T>
+    T& at(size_t index) {
+        // need to handle exception here
+        if (vals<T>.count(this) && index < vals<T>[this].size()) {
+            return vals<T>[this][index];
+        }
+    }
+    template<typename T>
+    const T& at(size_t index) const {
+        // need to handle exception here
+        if (vals<T>.count(this) && index < vals<T>[this].size())  {
+            return vals<T>[this][index];
+        }
+    }
     data_frame_col(const data_frame_col& _other) {
         *this = _other;
     }
@@ -34,11 +54,6 @@ public:
     store_type<T>& get_vector();
     template<typename T>
     const store_type<T>& get_vector() const;
-    template<typename T>
-    T &at(size_t idx);
-    template<typename T>
-    const T &at(size_t idx) const;
-    
 private:
     void clear() {
         for (auto&& clear_func : clear_functions) {
