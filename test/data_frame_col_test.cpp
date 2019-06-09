@@ -3,5 +3,5 @@
 using namespace boost::numeric::ublas;
 int main() {
     data_frame_col df;
-    df.setSize<int>(10);
+    
 }

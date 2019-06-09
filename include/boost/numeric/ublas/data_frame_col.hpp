@@ -1,29 +1,28 @@
 #ifndef _BOOST_UBLAS_DATA_FRAME_COL_	
 #define _BOOST_UBLAS_DATA_FRAME_COL_
 #include <boost/numeric/ublas/vector.hpp>
-#include <boost/poly_collection/base_collection.hpp>
 #include <unordered_map>
 #include <functional>
+#include <vector>
 namespace boost { namespace numeric { namespace ublas {	
-
 
 class data_frame_col {
 public:
     template<typename T>
     using store_type = boost::numeric::ublas::vector<T>;
     data_frame_col() = default;
-
     template<typename T>
-    void setSize(int rows) {
-        if (vals<T>.find(this) == std::end(vals<T>))
-        {   
+    void add_column(const std::vector<T>& other) {
+        if (!vals<T>.count(this)) {
             clear_functions.emplace_back([](data_frame_col& _c){vals<T>.erase(&_c);});
             copy_functions.emplace_back([](const data_frame_col& _from, data_frame_col& _to) {
                 vals<T>[&_to] = vals<T>[&_from];
             });
             size_functions.emplace_back([](const data_frame_col& _c){return vals<T>[&_c].size();});
         }
-        vals<T>[this] = store_type<T>(rows);
+        int len = other.size();
+        vals<T>[this] = store_type<T>(len);
+        for (int i = 0; i < len; i++) vals<T>[this][i] = other[i];
     }
     data_frame_col(const data_frame_col& _other) {
         *this = _other;
