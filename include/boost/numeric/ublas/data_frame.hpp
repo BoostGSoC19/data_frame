@@ -16,25 +16,8 @@ public:
     using type_map_t = std::unordered_map<std::string, std::string>;
     data_frame(): cur_rows(-1) {}
     data_frame(int rows): cur_rows(rows) {}
-
     template<typename T> 
     bool add_column(std::string col_name, std::vector<T> tmp_vec);
-
-    template<typename T>
-    bool init_column(std::string col_name, int size) {
-        if (col_names_map.count(col_name)) return false;
-        /* size check */
-        if (cur_rows == -1) cur_rows = size;
-        if (cur_rows != size) return false;         
-        auto iter = vals.insert(vals.begin(), data_frame_col(col_name, std::vector<T>(size)));
-        col_names_map.insert({col_name, iter});
-        type_map.insert({col_name, typeid(T).name()});
-        return true;
-    }
-    template<class... Args>
-    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
-        for_each_in_tuple(t, tuple_create_functor(this, size), names);
-    }
     template<class... Args>
     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
         for_each_in_tuple(t, tuple_functor(this, row), names);
@@ -78,6 +61,12 @@ private:
         int size;
         data_frame* df;
     };
+    template<typename T>
+    bool init_column(std::string col_name, int size);
+    template<class... Args>
+    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
+        for_each_in_tuple(t, tuple_create_functor(this, size), names);
+    }
     int cur_rows;
     store_t vals;
     /* col_names_map and type_map should maintain consistent */
@@ -96,7 +85,17 @@ bool data_frame::add_column(std::string col_name, std::vector<T> tmp_vec) {
     type_map.insert({col_name, typeid(T).name()});
     return true;
 }
-
+template<typename T>
+bool data_frame::init_column(std::string col_name, int size) {
+    if (col_names_map.count(col_name)) return false;
+    /* size check */
+    if (cur_rows == -1) cur_rows = size;
+    if (cur_rows != size) return false;         
+    auto iter = vals.insert(vals.begin(), data_frame_col(col_name, std::vector<T>(size)));
+    col_names_map.insert({col_name, iter});
+    type_map.insert({col_name, typeid(T).name()});
+    return true;
+}
 }}}
 
 #endif
