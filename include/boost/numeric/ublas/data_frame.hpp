@@ -19,19 +19,22 @@ public:
     template<typename T> 
     bool add_column(std::string col_name, std::vector<T> tmp_vec);
     template<class... Args>
+    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
+    // return the new order
+    template<typename T>
+    std::vector<int> order(const std::string col_name);
+    // use index to get a new data_frame
+    void at(int pos) {
+        
+    }
+    data_frame from_index(const std::vector<int>& index) {
+
+    }
+private:
+    template<class... Args>
     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
         for_each_in_tuple(t, tuple_functor(this, row), names);
     }
-    template<class... Args>
-    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names) {
-        if (t.size() != names.size()) return;
-        cur_rows = t.size();
-        init_columns(t[0], names, t.size());
-        for (int i = 0; i < cur_rows; i++) {
-            from_tuple(t[i], names, i);
-        }
-    }
-private:
     template<typename T, typename F, std::size_t ... Is>
     void for_each(T&& t, F f, std::index_sequence<Is...>, const std::vector<std::string>& names) {
         auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
@@ -95,6 +98,33 @@ bool data_frame::init_column(std::string col_name, int size) {
     col_names_map.insert({col_name, iter});
     type_map.insert({col_name, typeid(T).name()});
     return true;
+}
+template<class... Args>
+void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names) {
+    if (t.size() != names.size()) return;
+    cur_rows = t.size();
+    init_columns(t[0], names, t.size());
+    for (int i = 0; i < cur_rows; i++) {
+        from_tuple(t[i], names, i);
+    }
+}
+template<typename T>
+std::vector<int> data_frame::order(const std::string col_name) {
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < tmp_vector.size(); i++) {
+        tmp_index.push_back(i);
+    }
+    auto cmp = [&](int& l, int& r) -> bool {
+        return tmp_vector[l] > tmp_vector[r];
+    };
+    std::sort(tmp_index.begin(), tmp_index.end(), cmp);
+    return tmp_index;
 }
 }}}
 

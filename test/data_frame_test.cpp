@@ -14,8 +14,12 @@ int main() {
     df.add_column("str_vec", str_vec);
     std::tuple<int, double, std::string> t{1, 3.14, "hello"};
     data_frame df2;
-    df2.from_tuples(std::vector{std::make_tuple(1, 1.1, "1"), 
+    df2.from_tuples(std::vector{std::make_tuple(1, 3.3, "1"), 
                                 std::make_tuple(2, 2.2, "2"), 
-                                std::make_tuple(3, 3.3, "3")}, 
+                                std::make_tuple(3, 1.1, "3")}, 
                     {"int_vec", "double_vec", "str_vec"});
+    std::vector<int> new_index = df2.order<double>("double_vec");
+    for (int i = 0; i < new_index.size(); i++) {
+        std::cout << new_index[i] << std::endl;
+    }
 }
