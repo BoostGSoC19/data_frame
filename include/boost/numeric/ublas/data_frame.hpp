@@ -24,11 +24,25 @@ public:
     template<typename T>
     std::vector<int> order(const std::string col_name);
     // use index to get a new data_frame
-    void at(int pos) {
-        
+    template<typename... TypeLists, typename F>
+    void at(int pos, F f) {
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter->first;
+            auto& container = *(iter->second);
+            container.visit(f, pos, col_name);
+        }
     }
+    template<typename... TypeLists>
     data_frame from_index(const std::vector<int>& index) {
-
+        int len = index.size();
+        data_frame new_df;
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter->first;
+            new_df.init_column(col_name, len);
+        }
+        for (int i = 0; i < len; i++) {
+            at(index[i], visit_functor(&new_df, i));
+        }
     }
 private:
     template<class... Args>
@@ -61,6 +75,16 @@ private:
         void operator () (T t, std::string name) {
             df->init_column<T>(name, size);
         }
+        int size;
+        data_frame* df;
+    };
+    struct visit_functor {
+        visit_functor(data_frame* df, int pos, const std::string& col_name): df(df), size(pos), col_name(col_name) {}
+        template<typename T>
+        void operator()() {
+            
+        }
+        std::string col_name
         int size;
         data_frame* df;
     };
