@@ -27,8 +27,8 @@ public:
     template<typename... TypeLists, typename F>
     void at(int pos, F f) {
         for (auto iter: col_names_map) {
-            const auto& col_name = iter->first;
-            auto& container = *(iter->second);
+            const auto& col_name = iter.first;
+            auto& container = *(iter.second);
             container.visit(f, pos, col_name);
         }
     }
@@ -37,11 +37,11 @@ public:
         int len = index.size();
         data_frame new_df;
         for (auto iter: col_names_map) {
-            const auto& col_name = iter->first;
-            new_df.init_column(col_name, len);
+            const auto& col_name = iter.first;
+            new_df.init_column<TypeLists...>(col_name, len);
         }
         for (int i = 0; i < len; i++) {
-            at(index[i], visit_functor(&new_df, i));
+            at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df));
         }
     }
 private:
@@ -78,14 +78,17 @@ private:
         int size;
         data_frame* df;
     };
-    struct visit_functor {
-        visit_functor(data_frame* df, int pos, const std::string& col_name): df(df), size(pos), col_name(col_name) {}
+    template<typename...TypeLists>
+    struct visit_functor: data_frame_col::visitor_base<TypeLists...> {
+        visit_functor(data_frame* df, int pos): df(df){}
         template<typename T>
-        void operator()() {
-            
+        void operator()(T& _in, const std::string& col_name) {
+            auto iter = df->col_names_map.find(col_name);
+            if (iter == df->col_names_map.end()) return;
+            auto& container = *(iter->second);
+            container.at<T>(index) = _in;
         }
-        std::string col_name
-        int size;
+        //std::string col_name;
         data_frame* df;
     };
     template<typename T>

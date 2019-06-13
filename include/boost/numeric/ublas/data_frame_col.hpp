@@ -60,11 +60,9 @@ public:
         return vals<T>[this];
     }
     std::string col_name;
-private:
-    void clear() {
-        for (auto&& clear_func : clear_functions) {
-            clear_func(*this);
-        }
+    template<class F>
+    void visit(F&& f, int index) {
+        visit_impl(f, index, typename std::decay_t<F>::types{});
     }
     template<class...>
     struct type_list{};
@@ -72,6 +70,26 @@ private:
     struct visitor_base {
         using types = boost::numeric::ublas::data_frame_col::type_list<TypeLists...>;
     };
+private:
+    void clear() {
+        for (auto&& clear_func : clear_functions) {
+            clear_func(*this);
+        }
+    }
+
+    template<class F, template<class...> class Typelists, class... Types>
+    void visit_impl(F&& f, int index, Typelists<Types...>) {
+        (..., visit_impl_help<std::decay_t<F>, Types>(f, index));
+    }
+    template<class T, class U>
+    void visit_impl_help(T& visitor, int index, const std::string& col_name) {
+        visitor(at<U>(index), col_name);
+        /*
+        for (auto&& element : vals<U>[this]) {
+            visitor(element);
+        }
+        */
+    }
     template<class T>
     static std::unordered_map<const data_frame_col*, store_type<T>> vals;
 
