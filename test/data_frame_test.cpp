@@ -22,4 +22,5 @@ int main() {
     for (int i = 0; i < new_index.size(); i++) {
         std::cout << new_index[i] << std::endl;
     }
+    auto df3 = df2.from_index<int, double, std::string>({1, 2, 0});
 }

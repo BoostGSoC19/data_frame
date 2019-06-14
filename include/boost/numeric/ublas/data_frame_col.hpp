@@ -61,11 +61,19 @@ public:
     }
     std::string col_name;
     template<class F>
-    void visit(F&& f, int index) {
-        visit_impl(f, index, typename std::decay_t<F>::types{});
+    void visit(F&& f, int index, const std::string& col_name) {
+        visit_impl(f, index, col_name, typename std::decay_t<F>::types{});
+    }
+    template<class F>
+    void visit_init(F&& f) {
+        visit_init_impl(f, typename std::decay_t<F>::types{});
     }
     template<class...>
     struct type_list{};
+    template<class... TypeLists>
+    struct init_base {
+        using types = boost::numeric::ublas::data_frame_col::type_list<TypeLists...>;
+    };
     template<class... TypeLists>
     struct visitor_base {
         using types = boost::numeric::ublas::data_frame_col::type_list<TypeLists...>;
@@ -76,19 +84,23 @@ private:
             clear_func(*this);
         }
     }
-
     template<class F, template<class...> class Typelists, class... Types>
-    void visit_impl(F&& f, int index, Typelists<Types...>) {
-        (..., visit_impl_help<std::decay_t<F>, Types>(f, index));
+    void visit_impl(F&& f, int index, const std::string& col_name, Typelists<Types...>) {
+        (..., visit_impl_help<std::decay_t<F>, Types>(f, index, col_name));
+    }
+    template<class F, template<class...> class Typelists, class... Types>
+    void visit_init_impl(F&& f, Typelists<Types...>) {
+        (..., visit_init_impl_help<std::decay_t<F>, Types>(f));
     }
     template<class T, class U>
     void visit_impl_help(T& visitor, int index, const std::string& col_name) {
-        visitor(at<U>(index), col_name);
-        /*
-        for (auto&& element : vals<U>[this]) {
-            visitor(element);
-        }
-        */
+        if (vals<U>[this].size() > 0) 
+            visitor(at<U>(index), index, col_name);        
+    }
+    template<class T, class U>
+    void visit_init_impl_help(T& visitor) {
+        if (vals<U>[this].size() > 0) 
+            visitor(vals<U>[this][0]);
     }
     template<class T>
     static std::unordered_map<const data_frame_col*, store_type<T>> vals;

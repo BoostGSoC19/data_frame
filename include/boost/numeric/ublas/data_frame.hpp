@@ -38,11 +38,13 @@ public:
         data_frame new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
-            new_df.init_column<TypeLists...>(col_name, len);
+            auto& container = *(iter.second);
+            container.visit_init(init_functor<TypeLists...>(&new_df, col_name, len));
+            //new_df.init_column<TypeLists...>(col_name, len);
         }
-        for (int i = 0; i < len; i++) {
+        for (int i = 0; i < len; i++) 
             at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df));
-        }
+        return new_df;
     }
 private:
     template<class... Args>
@@ -70,7 +72,7 @@ private:
         data_frame* df;
     };
     struct tuple_create_functor {
-        tuple_create_functor(data_frame* df, int size): df(df), size(size) {}
+        tuple_create_functor(int size, data_frame* df): size(size) ,df(df){}
         template<typename T>
         void operator () (T t, std::string name) {
             df->init_column<T>(name, size);
@@ -80,22 +82,35 @@ private:
     };
     template<typename...TypeLists>
     struct visit_functor: data_frame_col::visitor_base<TypeLists...> {
-        visit_functor(data_frame* df, int pos): df(df){}
+        visit_functor(data_frame* df): df(df) {}
         template<typename T>
-        void operator()(T& _in, const std::string& col_name) {
+        void operator()(T& _in, int index, const std::string& col_name) {
             auto iter = df->col_names_map.find(col_name);
             if (iter == df->col_names_map.end()) return;
             auto& container = *(iter->second);
             container.at<T>(index) = _in;
         }
         //std::string col_name;
+        //size_t index;
+        data_frame* df;
+    };
+    template<typename... TypeLists>
+    struct init_functor: data_frame_col::visitor_base<TypeLists...> {
+        init_functor(data_frame* df, const std::string& col_name, int len):
+            df(df), col_name(col_name), len(len){ }
+        template<typename T>
+        void operator()(T& _in) {
+            df->init_column<T>(col_name, len);
+        }
+        int len;
+        const std::string& col_name;
         data_frame* df;
     };
     template<typename T>
     bool init_column(std::string col_name, int size);
     template<class... Args>
     void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
-        for_each_in_tuple(t, tuple_create_functor(this, size), names);
+        for_each_in_tuple(t, tuple_create_functor(size, this), names);
     }
     int cur_rows;
     store_t vals;
