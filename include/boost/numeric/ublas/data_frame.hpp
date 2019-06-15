@@ -51,7 +51,7 @@ public:
             //new_df.init_column<TypeLists...>(col_name, len);
         }
         for (int i = 0; i < len; i++) 
-            at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df));
+            at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df, i));
         return new_df;
     }
     template<typename... TypeLists>
@@ -62,6 +62,9 @@ public:
             print_at<TypeLists..., print_functor<TypeLists...>>(index[i], print_functor<TypeLists...>());
             std::cout << std::endl;
         }
+    }
+    int get_cur_rows() {
+        return cur_rows;
     }
 private:
     template<class... Args>
@@ -99,16 +102,15 @@ private:
     };
     template<typename...TypeLists>
     struct visit_functor: data_frame_col::visitor_base<TypeLists...> {
-        visit_functor(data_frame* df): df(df) {}
+        visit_functor(data_frame* df, size_t pos): df(df), pos(pos) {}
         template<typename T>
-        void operator()(T& _in, int index, const std::string& col_name) {
+        void operator()(T& _in, const std::string& col_name) {
             auto iter = df->col_names_map.find(col_name);
             if (iter == df->col_names_map.end()) return;
             auto& container = *(iter->second);
-            container.at<T>(index) = _in;
+            container.at<T>(pos) = _in;
         }
-        //std::string col_name;
-        //size_t index;
+        size_t pos;
         data_frame* df;
     };
     template<typename... TypeLists>

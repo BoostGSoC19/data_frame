@@ -26,6 +26,7 @@ public:
     template<typename T>
     T& at(size_t index) {
         // need to handle exception here
+        //std::cout << vals<T>[this].size() << std::endl;
         return vals<T>[this][index];
     }
     template<typename T>
@@ -102,8 +103,9 @@ private:
     }
     template<class T, class U>
     void visit_impl_help(T& visitor, int index, const std::string& col_name) {
-        if (vals<U>[this].size() > 0) 
-            visitor(at<U>(index), index, col_name);        
+        if (vals<U>[this].size() > 0) {
+            visitor(at<U>(index), col_name);        
+        }
     }
     template<class T, class U>
     void visit_init_impl_help(T& visitor) {
