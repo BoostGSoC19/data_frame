@@ -32,6 +32,14 @@ public:
             container.visit(f, pos, col_name);
         }
     }
+    template<typename... TypeLists, typename F>
+    void print_at(int pos, F f) {
+      for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            auto& container = *(iter.second);
+            container.visit_print(f, pos);
+        }
+    }
     template<typename... TypeLists>
     data_frame from_index(const std::vector<int>& index) {
         int len = index.size();
@@ -45,6 +53,15 @@ public:
         for (int i = 0; i < len; i++) 
             at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df));
         return new_df;
+    }
+    template<typename... TypeLists>
+    void print_index(const std::vector<int>& index) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            std::cout << "index " << index[i] <<": ";
+            print_at<TypeLists..., print_functor<TypeLists...>>(index[i], print_functor<TypeLists...>());
+            std::cout << std::endl;
+        }
     }
 private:
     template<class... Args>
@@ -105,6 +122,14 @@ private:
         int len;
         const std::string& col_name;
         data_frame* df;
+    };
+    template<typename... TypeLists>
+    struct print_functor: data_frame_col::visitor_base<TypeLists...> {
+        print_functor() = default;
+        template<typename T>
+        void operator()(T& in) {
+            std::cout << in << " ";
+        }
     };
     template<typename T>
     bool init_column(std::string col_name, int size);

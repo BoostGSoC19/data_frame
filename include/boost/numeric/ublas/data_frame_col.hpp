@@ -68,6 +68,10 @@ public:
     void visit_init(F&& f) {
         visit_init_impl(f, typename std::decay_t<F>::types{});
     }
+    template<class F>
+    void visit_print(F&& f, int index) {
+        visit_print_impl(f, index, typename std::decay_t<F>::types{});
+    }
     template<class...>
     struct type_list{};
     template<class... TypeLists>
@@ -92,6 +96,10 @@ private:
     void visit_init_impl(F&& f, Typelists<Types...>) {
         (..., visit_init_impl_help<std::decay_t<F>, Types>(f));
     }
+    template<class F, template<class...> class Typelists, class... Types>
+    void visit_print_impl(F&& f, int index,Typelists<Types...>) {
+        (..., visit_print_impl_help<std::decay_t<F>, Types>(f, index));
+    }
     template<class T, class U>
     void visit_impl_help(T& visitor, int index, const std::string& col_name) {
         if (vals<U>[this].size() > 0) 
@@ -101,6 +109,11 @@ private:
     void visit_init_impl_help(T& visitor) {
         if (vals<U>[this].size() > 0) 
             visitor(vals<U>[this][0]);
+    }
+    template<class T, class U>
+    void visit_print_impl_help(T& visitor, int index) {
+        if (vals<U>[this].size() > 0) 
+            visitor(vals<U>[this][index]);
     }
     template<class T>
     static std::unordered_map<const data_frame_col*, store_type<T>> vals;
