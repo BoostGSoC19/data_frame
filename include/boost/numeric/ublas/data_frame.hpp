@@ -94,7 +94,7 @@ private:
     struct tuple_create_functor {
         tuple_create_functor(int size, data_frame* df): size(size) ,df(df){}
         template<typename T>
-        void operator () (T t, std::string name) {
+        void operator () (T t, const std::string& name) {
             df->init_column<T>(name, size);
         }
         int size;
@@ -134,7 +134,7 @@ private:
         }
     };
     template<typename T>
-    bool init_column(std::string col_name, int size);
+    bool init_column(const std::string& col_name, int size);
     template<class... Args>
     void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
         for_each_in_tuple(t, tuple_create_functor(size, this), names);
@@ -158,11 +158,11 @@ bool data_frame::add_column(std::string col_name, std::vector<T> tmp_vec) {
     return true;
 }
 template<typename T>
-bool data_frame::init_column(std::string col_name, int size) {
+bool data_frame::init_column(const std::string& col_name, int size) {
     if (col_names_map.count(col_name)) return false;
     /* size check */
     if (cur_rows == -1) cur_rows = size;
-    if (cur_rows != size) return false;         
+    if (cur_rows != size) return false;
     auto iter = vals.insert(vals.begin(), data_frame_col(col_name, std::vector<T>(size)));
     col_names_map.insert({col_name, iter});
     type_map.insert({col_name, typeid(T).name()});
@@ -170,12 +170,13 @@ bool data_frame::init_column(std::string col_name, int size) {
 }
 template<class... Args>
 void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names) {
-    if (t.size() != names.size()) return;
+    if (sizeof...(Args) != names.size()) return;
     cur_rows = t.size();
-    init_columns(t[0], names, t.size());
+    init_columns(t[0], names, cur_rows);
     for (int i = 0; i < cur_rows; i++) {
         from_tuple(t[i], names, i);
     }
+    print_index<Args...>({0, 1});
 }
 template<typename T>
 std::vector<int> data_frame::order(const std::string col_name) {
