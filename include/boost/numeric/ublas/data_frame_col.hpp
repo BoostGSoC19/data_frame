@@ -5,7 +5,10 @@
 #include <functional>
 #include <vector>
 namespace boost { namespace numeric { namespace ublas {	
-
+template<typename... Typelists>
+struct type_list {
+    using types = std::tuple<Typelists...>;
+};
 class data_frame_col {
 public:
     template<typename T>
@@ -60,7 +63,6 @@ public:
     const store_type<T>& get_vector() const {
         return vals<T>[this];
     }
-    std::string col_name;
     template<class F>
     void visit(F&& f, int index, const std::string& col_name) {
         visit_impl(f, index, col_name, typename std::decay_t<F>::types{});
@@ -73,16 +75,17 @@ public:
     void visit_print(F&& f, int index) {
         visit_print_impl(f, index, typename std::decay_t<F>::types{});
     }
-    template<class...>
-    struct type_list{};
+    /*
     template<class... TypeLists>
     struct init_base {
-        using types = boost::numeric::ublas::data_frame_col::type_list<TypeLists...>;
+        using types = boost::numeric::ublas::type_list<TypeLists...>;
     };
     template<class... TypeLists>
     struct visitor_base {
-        using types = boost::numeric::ublas::data_frame_col::type_list<TypeLists...>;
+        using types = boost::numeric::ublas::type_list<TypeLists...>;
     };
+    */
+    std::string col_name;
 private:
     void clear() {
         for (auto&& clear_func : clear_functions) {

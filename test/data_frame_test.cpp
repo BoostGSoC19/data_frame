@@ -16,7 +16,8 @@ int main() {
     data_frame df;
     df.add_column("int_vec", int_vec);
     df.add_column("str_vec", str_vec);
-    std::tuple<int, double, std::string> t{1, 3.14, "hello"};
+    using type_collection = type_list<int, double, std::string>::types;
+    type_collection t{1, 3.14, "hello"};
     
     data_frame df2;
     df2.from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 
