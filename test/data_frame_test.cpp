@@ -25,8 +25,8 @@ int main() {
                                 std::make_tuple(3, 1.1, "bili"s)}, 
                     {"int_vec", "double_vec", "str_vec"});
     //std::vector<int> new_index = df2.order<double>("double_vec");
-    df2.print_index<int, double, std::string>({0, 1, 2});
-    auto df3 = df.from_index<int, double, std::string>({1, 2, 0, 2});
+    df2.print_index({0, 1, 2}, type_collection{});
+    auto df3 = df.from_index({1, 2, 0, 2}, type_collection{});
     std::cout << "cur rows: " << df3.get_cur_rows() << std::endl;
-    df3.print_index<int, double, std::string>({0, 1, 2, 3});
+    df3.print_index({0, 1, 2, 3}, type_collection{});
 }

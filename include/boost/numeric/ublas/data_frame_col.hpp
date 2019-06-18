@@ -75,16 +75,6 @@ public:
     void visit_print(F&& f, int index) {
         visit_print_impl(f, index, typename std::decay_t<F>::types{});
     }
-    /*
-    template<class... TypeLists>
-    struct init_base {
-        using types = boost::numeric::ublas::type_list<TypeLists...>;
-    };
-    template<class... TypeLists>
-    struct visitor_base {
-        using types = boost::numeric::ublas::type_list<TypeLists...>;
-    };
-    */
     std::string col_name;
 private:
     void clear() {
@@ -122,7 +112,6 @@ private:
     }
     template<class T>
     static std::unordered_map<const data_frame_col*, store_type<T>> vals;
-
     std::vector<std::function<void(data_frame_col&)>> clear_functions;
     std::vector<std::function<void(const data_frame_col&, data_frame_col&)>> copy_functions;
     std::vector<std::function<size_t(const data_frame_col&)>> size_functions;

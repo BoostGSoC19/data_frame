@@ -40,26 +40,26 @@ public:
             container.visit_print(f, pos);
         }
     }
-    template<typename... TypeLists>
-    data_frame from_index(const std::vector<int>& index) {
+    template<template<class...> class TypeLists, class... Types>
+    data_frame from_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
         data_frame new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             auto& container = *(iter.second);
-            container.visit_init(init_functor<TypeLists...>(&new_df, col_name, len));
+            container.visit_init(init_functor<Types...>(&new_df, col_name, len));
             //new_df.init_column<TypeLists...>(col_name, len);
         }
         for (int i = 0; i < len; i++) 
-            at<TypeLists..., visit_functor<TypeLists...>>(index[i], visit_functor<TypeLists...>(&new_df, i));
+            at<Types..., visit_functor<Types...>>(index[i], visit_functor<Types...>(&new_df, i));
         return new_df;
     }
-    template<typename... TypeLists>
-    void print_index(const std::vector<int>& index) {
+    template<template<class...> class TypeLists, class... Types>
+    void print_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
             std::cout << "index " << index[i] <<": ";
-            print_at<TypeLists..., print_functor<TypeLists...>>(index[i], print_functor<TypeLists...>());
+            print_at<Types..., print_functor<Types...>>(index[i], print_functor<Types...>());
             std::cout << std::endl;
         }
     }
@@ -101,7 +101,7 @@ private:
         data_frame* df;
     };
     template<typename...TypeLists>
-    struct visit_functor: data_frame_col::visitor_base<TypeLists...> {
+    struct visit_functor: type_list<TypeLists...> {
         visit_functor(data_frame* df, size_t pos): df(df), pos(pos) {}
         template<typename T>
         void operator()(T& _in, const std::string& col_name) {
@@ -114,7 +114,8 @@ private:
         data_frame* df;
     };
     template<typename... TypeLists>
-    struct init_functor: data_frame_col::visitor_base<TypeLists...> {
+    struct init_functor: type_list<TypeLists...> {
+        using types = typename type_list<TypeLists...>::types;
         init_functor(data_frame* df, const std::string& col_name, int len):
             df(df), col_name(col_name), len(len){ }
         template<typename T>
@@ -126,7 +127,8 @@ private:
         data_frame* df;
     };
     template<typename... TypeLists>
-    struct print_functor: data_frame_col::visitor_base<TypeLists...> {
+    struct print_functor:type_list<TypeLists...>  {
+        using types = typename type_list<TypeLists...>::types;
         print_functor() = default;
         template<typename T>
         void operator()(T& in) {
@@ -176,7 +178,7 @@ void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const st
     for (int i = 0; i < cur_rows; i++) {
         from_tuple(t[i], names, i);
     }
-    print_index<Args...>({0, 1});
+    //print_index<Args...>({0, 1});
 }
 template<typename T>
 std::vector<int> data_frame::order(const std::string col_name) {
