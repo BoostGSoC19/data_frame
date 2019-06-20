@@ -63,10 +63,16 @@ public:
     const store_type<T>& get_vector() const {
         return vals<T>[this];
     }
-    template<class F>
-    void visit(F&& f, int index, const std::string& col_name) {
-        visit_impl(f, index, col_name, typename std::decay_t<F>::types{});
+    
+    template<typename F, template<class...> class TypeLists, typename... Types>
+    void visit(int index, const std::string& col_name, F&& f, TypeLists<Types...>) {
+        (..., [this, functor = std::move(f)](int i, const std::string& name) mutable {
+            if (vals<Types>[this].size() > 0) {
+                functor(at<Types>(i), name);
+            }
+        }(index, col_name));
     }
+    
     template<class F>
     void visit_init(F&& f) {
         visit_init_impl(f, typename std::decay_t<F>::types{});
@@ -83,22 +89,12 @@ private:
         }
     }
     template<class F, template<class...> class Typelists, class... Types>
-    void visit_impl(F&& f, int index, const std::string& col_name, Typelists<Types...>) {
-        (..., visit_impl_help<std::decay_t<F>, Types>(f, index, col_name));
-    }
-    template<class F, template<class...> class Typelists, class... Types>
     void visit_init_impl(F&& f, Typelists<Types...>) {
         (..., visit_init_impl_help<std::decay_t<F>, Types>(f));
     }
     template<class F, template<class...> class Typelists, class... Types>
     void visit_print_impl(F&& f, int index,Typelists<Types...>) {
         (..., visit_print_impl_help<std::decay_t<F>, Types>(f, index));
-    }
-    template<class T, class U>
-    void visit_impl_help(T& visitor, int index, const std::string& col_name) {
-        if (vals<U>[this].size() > 0) {
-            visitor(at<U>(index), col_name);        
-        }
     }
     template<class T, class U>
     void visit_init_impl_help(T& visitor) {
