@@ -24,33 +24,39 @@ public:
     template<typename T>
     std::vector<int> order(const std::string col_name);
     // use index to get a new data_frame
-    template<class... Types, typename F>
-    void at(int pos, F&& f) {
+    template<typename... Types, typename F>
+    void invoke_at(int pos, F&& f) {
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             auto& container = *(iter.second);
-            container.visit(pos, col_name, std::move(f), typename type_list<Types...>::types{});
+            container.fill_data_at(pos, col_name, std::move(f), typename type_list<Types...>::types{});
         }
     }
-    template<typename... TypeLists, typename F>
+    template<typename... Types, typename F>
     void print_at(int pos, F f) {
       for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             auto& container = *(iter.second);
-            container.visit_print(std::move(f), pos);
+            container.print_at(pos, std::move(f), typename type_list<Types...>::types{});
         }
     }
+    template<typename... Types, typename F>
+    void initialize(const std::string& col_name, int len, F f) {
+        auto& container = col_names_map[col_name];
+        container->initialize(std::move(f), typename type_list<Types...>::types{});
+    }
     template<template<class...> class TypeLists, class... Types>
-    data_frame from_index(const std::vector<int>& index, TypeLists<Types...>) {
+    data_frame copy_with_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
         data_frame new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
-            auto& container = *(iter.second);
-            container.visit_init(init_functor<Types...>(&new_df, col_name, len));
+            initialize<Types...>(col_name, len, [&new_df, col_name, len](auto& in) mutable {
+                new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
+            });
         }
         for (int i = 0; i < len; i++) {
-            at<Types...>(index[i], [&new_df, i](auto& in, const std::string& col_name) mutable {
+            invoke_at<Types...>(index[i], [&new_df, i](auto& in, const std::string& col_name) mutable {
                 auto iter = new_df.col_names_map.find(col_name);
                 if (iter == new_df.col_names_map.end()) return;
                 auto& container = *(iter->second);
@@ -60,12 +66,14 @@ public:
         return new_df;
     }
     template<template<class...> class TypeLists, class... Types>
-    void print_index(const std::vector<int>& index, TypeLists<Types...>) {
+    void print_with_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
             std::cout << "index " << index[i] <<": ";
-            print_at<Types..., print_functor<Types...>>(index[i], print_functor<Types...>());
-            std::cout << std::endl;
+            print_at<Types...>(index[i], [this](auto& in){
+                std::cout << in << " ";
+            });
+            std::cout << '\n';
         }
     }
     int get_cur_rows() {
@@ -104,28 +112,6 @@ private:
         }
         int size;
         data_frame* df;
-    };
-    template<typename... TypeLists>
-    struct init_functor: type_list<TypeLists...> {
-        using types = typename type_list<TypeLists...>::types;
-        init_functor(data_frame* df, const std::string& col_name, int len):
-            df(df), col_name(col_name), len(len){ }
-        template<typename T>
-        void operator()(T& _in) {
-            df->init_column<T>(col_name, len);
-        }
-        int len;
-        const std::string& col_name;
-        data_frame* df;
-    };
-    template<typename... TypeLists>
-    struct print_functor:type_list<TypeLists...>  {
-        using types = typename type_list<TypeLists...>::types;
-        print_functor() = default;
-        template<typename T>
-        void operator()(T& in) {
-            std::cout << in << " ";
-        }
     };
     template<typename T>
     bool init_column(const std::string& col_name, int size);

@@ -4,10 +4,11 @@
 #include <unordered_map>
 #include <functional>
 #include <vector>
+#include <variant>
 namespace boost { namespace numeric { namespace ublas {	
 template<typename... Typelists>
 struct type_list {
-    using types = std::tuple<Typelists...>;
+    using types = std::variant<Typelists...>;
 };
 class data_frame_col {
 public:
@@ -65,21 +66,26 @@ public:
     }
     
     template<typename F, template<class...> class TypeLists, typename... Types>
-    void visit(int index, const std::string& col_name, F&& f, TypeLists<Types...>) {
+    void fill_data_at(int index, const std::string& col_name, F&& f, TypeLists<Types...>) {
         (..., [this, functor = std::move(f)](int i, const std::string& name) mutable {
-            if (vals<Types>[this].size() > 0) {
+            if (vals<Types>[this].size() > 0)
                 functor(at<Types>(i), name);
-            }
         }(index, col_name));
     }
     
-    template<class F>
-    void visit_init(F&& f) {
-        visit_init_impl(f, typename std::decay_t<F>::types{});
+    template<typename F, template<class...> class TypeLists, typename... Types>
+    void initialize(F&& f, TypeLists<Types...>) {
+         (..., [this, functor = std::move(f)]() mutable {
+            if (vals<Types>[this].size() > 0) 
+                functor(vals<Types>[this][0]);
+         }());
     }
-    template<class F>
-    void visit_print(F&& f, int index) {
-        visit_print_impl(f, index, typename std::decay_t<F>::types{});
+    template<typename F, template<class...> class TypeLists, typename... Types>
+    void print_at(int index, F&& f, TypeLists<Types...>) {
+        (..., [this, functor = std::move(f)](int i) {
+            if (vals<Types>[this].size() > 0) 
+                functor(vals<Types>[this][i]);
+        }(index));
     }
     std::string col_name;
 private:
@@ -87,24 +93,6 @@ private:
         for (auto&& clear_func : clear_functions) {
             clear_func(*this);
         }
-    }
-    template<class F, template<class...> class Typelists, class... Types>
-    void visit_init_impl(F&& f, Typelists<Types...>) {
-        (..., visit_init_impl_help<std::decay_t<F>, Types>(f));
-    }
-    template<class F, template<class...> class Typelists, class... Types>
-    void visit_print_impl(F&& f, int index,Typelists<Types...>) {
-        (..., visit_print_impl_help<std::decay_t<F>, Types>(f, index));
-    }
-    template<class T, class U>
-    void visit_init_impl_help(T& visitor) {
-        if (vals<U>[this].size() > 0) 
-            visitor(vals<U>[this][0]);
-    }
-    template<class T, class U>
-    void visit_print_impl_help(T& visitor, int index) {
-        if (vals<U>[this].size() > 0) 
-            visitor(vals<U>[this][index]);
     }
     template<class T>
     static std::unordered_map<const data_frame_col*, store_type<T>> vals;
