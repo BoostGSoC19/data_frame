@@ -1,5 +1,6 @@
 #ifndef _BOOST_UBLAS_DATA_FRAME_COL_	
 #define _BOOST_UBLAS_DATA_FRAME_COL_
+#include <boost/mp11/algorithm.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <unordered_map>
 #include <functional>
@@ -8,7 +9,8 @@
 namespace boost { namespace numeric { namespace ublas {	
 template<typename... Typelists>
 struct type_list {
-    using types = std::variant<Typelists...>;
+    using original_types = std::tuple<Typelists...>;
+    using types = boost::mp11::mp_unique<original_types>;
 };
 class data_frame_col {
 public:
