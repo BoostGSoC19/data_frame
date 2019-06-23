@@ -6,6 +6,16 @@
 #include <typeinfo>
 #include <type_traits>
 #include <string>
+#include <boost/mpl/set.hpp>
+#include <boost/mpl/back_inserter.hpp>
+#include <boost/mpl/assert.hpp>
+#include <boost/mpl/equal.hpp>
+#include <boost/mpl/insert.hpp>
+#include <boost/mpl/fold.hpp>
+#include <boost/mpl/vector.hpp>
+#include <boost/mpl/placeholders.hpp>
+#include <boost/mpl/size.hpp>
+#include <boost/mpl/copy.hpp>
 #include "gtest/gtest.h"
 #include "data_frame.hpp"
 using namespace boost::numeric::ublas;
