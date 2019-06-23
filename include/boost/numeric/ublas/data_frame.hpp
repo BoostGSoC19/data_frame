@@ -79,6 +79,9 @@ public:
     int get_cur_rows() {
         return cur_rows;
     }
+    int get_cur_cols() {
+        return col_names_map.size();
+    }
 private:
     template<class... Args>
     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
