@@ -100,3 +100,25 @@ TEST(Data_frame, copy_with_slice_test) {
     EXPECT_EQ(df5.get_cur_rows(), 3);
     EXPECT_EQ(df5.get_cur_cols(), 3);
 }
+TEST(Data_frame, create_view_with_range) {
+    using type_collection2 = type_list<double, std::string, long, long>::types;
+    data_frame df4;
+    df4.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10L), 
+                                std::make_tuple(2.2, "world"s, 40L), 
+                                std::make_tuple(1.1, "bili"s, 50L)}, 
+                    {"double_vec", "str_vec", "long_vec"});
+    range r(0, 2);
+    data_frame_view df5 = df4.create_view_with_range(r, type_collection2{});
+}
+TEST(Data_frame, apply_with_index_test) {
+    using type_collection2 = type_list<double, long>::types;
+    data_frame df4;
+    df4.from_tuples(std::vector{std::make_tuple(3.3, 10L), 
+                                std::make_tuple(2.2, 40L), 
+                                std::make_tuple(1.1, 50L)}, 
+                    {"double_vec", "long_vec"});
+    df4.apply_with_index({0, 1}, [](auto& t) {
+        return t * 2;
+    }, type_collection2{});
+    df4.print_with_index({0, 1, 2},type_collection2{} );
+}

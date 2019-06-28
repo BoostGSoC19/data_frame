@@ -10,6 +10,9 @@
 #include <tuple>
 #include <typeinfo>
 namespace boost { namespace numeric { namespace ublas {	
+template<template<class...> class TypeLists, class... Types>
+class data_frame_view;
+
 class data_frame {
 public:
     using store_t = std::list<data_frame_col>;
@@ -24,7 +27,21 @@ public:
     // return the new order
     template<typename T>
     std::vector<int> order(const std::string col_name);
-    // use index to get a new data_frame
+    /**
+     * Use index to get a data_frame_view
+     */
+    template<template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> create_view_with_range(const vector<int>& index, TypeLists<Types...>) {
+        return data_frame_view(this, index, TypeLists<Types...>{});
+    }
+    template<template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> create_view_with_range(const range& r, TypeLists<Types...>) {
+        return data_frame_view(this, r, TypeLists<Types...>{});
+    }
+    template<template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> create_view_with_range(const slice& s, TypeLists<Types...>) {
+        return data_frame_view(this, s, TypeLists<Types...>{});
+    }
     template<template<class...> class TypeLists, class... Types>
     data_frame copy_with_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
@@ -85,12 +102,21 @@ public:
         }
         return new_df;
     }
+    template<typename F, template<class...> class TypeLists, class... Types>
+    void apply_with_index(const std::vector<int>& index, F f, TypeLists<Types...>) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            apply_at<Types...>(index[i], [this, functor = f](auto& in){
+                in = functor(in);
+            });
+        }
+    }
     template<template<class...> class TypeLists, class... Types>
     void print_with_index(const std::vector<int>& index, TypeLists<Types...>) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
             std::cout << "index " << index[i] <<": ";
-            print_at<Types...>(index[i], [this](auto& in){
+            apply_at<Types...>(index[i], [this](auto& in){
                 std::cout << in << " ";
             });
             std::cout << '\n';
@@ -101,7 +127,7 @@ public:
         int len = index.size();
         for (int i = 0; i < len; i++) {
             std::cout << "index " << index(i) <<": ";
-            print_at<Types...>(index(i), [this](auto& in){
+            apply_at<Types...>(index(i), [this](auto& in){
                 std::cout << in << " ";
             });
             std::cout << '\n';
@@ -112,7 +138,7 @@ public:
         int len = index.size();
         for (int i = 0; i < len; i++) {
             std::cout << "index " << index(i) <<": ";
-            print_at<Types...>(index(i), [this](auto& in){
+            apply_at<Types...>(index(i), [this](auto& in){
                 std::cout << in << " ";
             });
             std::cout << '\n';
@@ -134,11 +160,11 @@ private:
         }
     }
     template<typename... Types, typename F>
-    void print_at(int pos, F f) {
+    void apply_at(int pos, F f) {
       for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             auto& container = *(iter.second);
-            container.print_at(pos, std::move(f), typename type_list<Types...>::types{});
+            container.apply_at(pos, std::move(f), typename type_list<Types...>::types{});
         }
     }
     template<typename... Types, typename F>
@@ -242,6 +268,38 @@ std::vector<int> data_frame::order(const std::string col_name) {
     std::sort(tmp_index.begin(), tmp_index.end(), cmp);
     return tmp_index;
 }
+template<template<class...> class TypeLists, class... Types>
+class data_frame_view {
+public:
+    data_frame_view(data_frame* df, const std::vector<int>& index, TypeLists<Types...>) {
+        data_frame_ptr = df;
+        internal_index.clear();
+        int len = index.size();
+        for (int i = 0; i < len; i++)
+            internal_index.push_back(index[i]);
+    }
+    data_frame_view(data_frame* df, const slice& index, TypeLists<Types...>) {
+        data_frame_ptr = df;
+        internal_index.clear();
+        int len = index.size();
+        for (int i = 0; i < len; i++)
+            internal_index.push_back(index(i));
+    }
+    data_frame_view(data_frame* df, const range& index, TypeLists<Types...>) {
+        data_frame_ptr = df;
+        internal_index.clear();
+        int len = index.size();
+        for (int i = 0; i < len; i++)
+            internal_index.push_back(index(i));
+    }
+    template<typename F>
+    void apply_with_index(const std::vector<int>& index, F f) {
+        data_frame_ptr->apply_with_index(index, f, TypeLists<Types...>{});
+    }
+private: 
+    std::vector<int> internal_index;
+    data_frame* data_frame_ptr;
+};
 }}}
 
 #endif

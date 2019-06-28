@@ -74,7 +74,6 @@ public:
                 functor(at<Types>(i), name);
         }(index, col_name));
     }
-    
     template<typename F, template<class...> class TypeLists, typename... Types>
     void initialize(F&& f, TypeLists<Types...>) {
          (..., [this, functor = std::move(f)]() mutable {
@@ -83,7 +82,7 @@ public:
          }());
     }
     template<typename F, template<class...> class TypeLists, typename... Types>
-    void print_at(int index, F&& f, TypeLists<Types...>) {
+    void apply_at(int index, F&& f, TypeLists<Types...>) {
         (..., [this, functor = std::move(f)](int i) {
             if (vals<Types>[this].size() > 0) 
                 functor(vals<Types>[this][i]);
