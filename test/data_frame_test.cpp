@@ -1,4 +1,5 @@
 #include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/storage.hpp>
 #include "data_frame.hpp"
 #include <vector>
 #include <iostream>
@@ -6,16 +7,6 @@
 #include <typeinfo>
 #include <type_traits>
 #include <string>
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/back_inserter.hpp>
-#include <boost/mpl/assert.hpp>
-#include <boost/mpl/equal.hpp>
-#include <boost/mpl/insert.hpp>
-#include <boost/mpl/fold.hpp>
-#include <boost/mpl/vector.hpp>
-#include <boost/mpl/placeholders.hpp>
-#include <boost/mpl/size.hpp>
-#include <boost/mpl/copy.hpp>
 #include "gtest/gtest.h"
 #include "data_frame.hpp"
 using namespace boost::numeric::ublas;
@@ -84,4 +75,28 @@ TEST(Data_frame, filt_repeat_types) {
     df4.print_with_index({0, 1, 2}, type_collection2{});
     EXPECT_EQ(df4.get_cur_rows(), 3);
     EXPECT_EQ(df4.get_cur_cols(), 3);
+}
+TEST(Data_frame, copy_with_range_test) {
+    using type_collection2 = type_list<double, std::string, long, long>::types;
+    data_frame df4;
+    df4.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10L), 
+                                std::make_tuple(2.2, "world"s, 40L), 
+                                std::make_tuple(1.1, "bili"s, 50L)}, 
+                    {"double_vec", "str_vec", "long_vec"});
+    range r(0, 2);
+    data_frame df5 = df4.copy_with_range(r, type_collection2{});
+    EXPECT_EQ(df5.get_cur_rows(), 2);
+    EXPECT_EQ(df5.get_cur_cols(), 3);
+}
+TEST(Data_frame, copy_with_slice_test) {
+    using type_collection2 = type_list<double, std::string, long, long>::types;
+    data_frame df4;
+    df4.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10L), 
+                                std::make_tuple(2.2, "world"s, 40L), 
+                                std::make_tuple(1.1, "bili"s, 50L)}, 
+                    {"double_vec", "str_vec", "long_vec"});
+    slice s (0, 1, 3);
+    data_frame df5 = df4.copy_with_slice(s, type_collection2{});
+    EXPECT_EQ(df5.get_cur_rows(), 3);
+    EXPECT_EQ(df5.get_cur_cols(), 3);
 }
