@@ -24,21 +24,27 @@ public:
     bool add_column(std::string col_name, std::vector<T> tmp_vec);
     template<class... Args>
     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
+    template<typename Col_type, typename F, template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> select(const std::string& col_name, F f, TypeLists<Types...>) {
+        const std::vector<int>& new_order = filter<Col_type>(col_name);
+        return create_view_with_index(std::move(new_order), TypeLists<Types...>{});
+    }
     template<typename Col_type, template<class...> class TypeLists, class... Types>
     data_frame_view<TypeLists, Types...> sort(const std::string& col_name, TypeLists<Types...>) {
         const std::vector<int>& new_order = order<Col_type>(col_name);
-        return create_view_with_range(new_order, TypeLists<Types...>{});
+        return create_view_with_index(std::move(new_order), TypeLists<Types...>{});
     }
     template<typename Col_type, typename F, template<class...> class TypeLists, class... Types>
     data_frame_view<TypeLists, Types...> sort(const std::string& col_name, F f, TypeLists<Types...>) {
         const std::vector<int>& new_order = order<Col_type>(col_name, f);
-        return create_view_with_range(new_order, TypeLists<Types...>{});
+        return create_view_with_index(std::move(new_order), TypeLists<Types...>{});
     }
-    /**
-     * Use index to get a data_frame_view
-     */
     template<template<class...> class TypeLists, class... Types>
-    data_frame_view<TypeLists, Types...> create_view_with_range(const vector<int>& index, TypeLists<Types...>) {
+    data_frame_view<TypeLists, Types...> create_view_with_index(std::vector<int>&& index, TypeLists<Types...>) {
+        return data_frame_view(this, std::move(index), TypeLists<Types...>{});
+    }
+    template<template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> create_view_with_index(const std::vector<int>& index, TypeLists<Types...>) {
         return data_frame_view(this, index, TypeLists<Types...>{});
     }
     template<template<class...> class TypeLists, class... Types>
@@ -46,7 +52,7 @@ public:
         return data_frame_view(this, r, TypeLists<Types...>{});
     }
     template<template<class...> class TypeLists, class... Types>
-    data_frame_view<TypeLists, Types...> create_view_with_range(const slice& s, TypeLists<Types...>) {
+    data_frame_view<TypeLists, Types...> create_view_with_slice(const slice& s, TypeLists<Types...>) {
         return data_frame_view(this, s, TypeLists<Types...>{});
     }
     template<template<class...> class TypeLists, class... Types>
@@ -161,6 +167,8 @@ public:
     std::vector<int> order(const std::string& col_name);
     template<typename T, typename F>
     std::vector<int> order(const std::string& col_name, F f);
+    template<typename T, typename F>
+    std::vector<int> filter(const std::string& col_name, F f);
 private:
     template<typename... Types, typename F>
     void invoke_at(int pos, F&& f) {
@@ -259,15 +267,14 @@ void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const st
     for (int i = 0; i < cur_rows; i++) {
         from_tuple(t[i], names, i);
     }
-    //print_index<Args...>({0, 1});
 }
 template<typename T>
 std::vector<int> data_frame::order(const std::string& col_name) {
     if (!col_names_map.count(col_name)) return {};
     if (type_map[col_name] != typeid(T).name()) return {};
     auto iter = col_names_map.find(col_name);
-    auto& container = *(iter->second);
-    auto& tmp_vector = container.get_vector<T>();
+    const auto& container = *(iter->second);
+    const auto& tmp_vector = container.get_vector<T>();
     int len = tmp_vector.size();
     std::vector<int> tmp_index;
     for (int i = 0; i < tmp_vector.size(); i++) {
@@ -297,9 +304,26 @@ std::vector<int> data_frame::order(const std::string& col_name, F f) {
     std::sort(tmp_index.begin(), tmp_index.end(), cmp);
     return tmp_index;
 }
+template<typename T, typename F>
+std::vector<int> data_frame::filter(const std::string& col_name, F f) {
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < len; i++) {
+        if (f(tmp_vector[i]))
+            tmp_index.push_back(i);
+    }
+    return tmp_index;
+}
 template<template<class...> class TypeLists, class... Types>
 class data_frame_view {
 public:
+    data_frame_view(data_frame* df, std::vector<int>&& index, TypeLists<Types...>): 
+        data_frame_ptr(df), internal_index(std::move(index)) {}
     data_frame_view(data_frame* df, const std::vector<int>& index, TypeLists<Types...>) {
         data_frame_ptr = df;
         internal_index.clear();
@@ -322,7 +346,7 @@ public:
             internal_index.push_back(index(i));
     }
     template<typename F>
-    data_frame_view<TypeLists, Types...> apply_with_index(const std::vector<int>& index, F f) {
+    data_frame_view<TypeLists, Types...>& apply_with_index(const std::vector<int>& index, F f) {
         data_frame_ptr->apply_with_index(index, f, TypeLists<Types...>{});
         return *this;
     }
@@ -336,13 +360,18 @@ public:
         data_frame_ptr->print_with_slice(index, TypeLists<Types...>{});
     }
     template<typename T>
-    data_frame_view<TypeLists, Types...> sort(const std::string& col_name) {
+    data_frame_view<TypeLists, Types...>& sort(const std::string& col_name) {
         data_frame_ptr->sort<T>(col_name, TypeLists<Types...>{});
         return *this;
     }
     template<typename T, typename F>
-    data_frame_view<TypeLists, Types...> sort(const std::string& col_name, F f) {
+    data_frame_view<TypeLists, Types...>& sort(const std::string& col_name, F f) {
         data_frame_ptr->sort<T>(col_name, f, TypeLists<Types...>{});
+        return *this;
+    }
+    template<typename T, typename F>
+    data_frame_view<TypeLists, Types...>& select(const std::string& col_name, F f) {
+        data_frame_ptr->select<T>(col_name, f, TypeLists<Types...>{});
         return *this;
     }
 private: 
