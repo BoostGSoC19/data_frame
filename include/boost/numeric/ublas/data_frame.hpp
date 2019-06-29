@@ -24,9 +24,16 @@ public:
     bool add_column(std::string col_name, std::vector<T> tmp_vec);
     template<class... Args>
     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
-    // return the new order
-    template<typename T>
-    std::vector<int> order(const std::string col_name);
+    template<typename Col_type, template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> sort(const std::string& col_name, TypeLists<Types...>) {
+        const std::vector<int>& new_order = order<Col_type>(col_name);
+        return create_view_with_range(new_order, TypeLists<Types...>{});
+    }
+    template<typename Col_type, typename F, template<class...> class TypeLists, class... Types>
+    data_frame_view<TypeLists, Types...> sort(const std::string& col_name, F f, TypeLists<Types...>) {
+        const std::vector<int>& new_order = order<Col_type>(col_name, f);
+        return create_view_with_range(new_order, TypeLists<Types...>{});
+    }
     /**
      * Use index to get a data_frame_view
      */
@@ -150,6 +157,10 @@ public:
     int get_cur_cols() {
         return col_names_map.size();
     }
+    template<typename T>
+    std::vector<int> order(const std::string& col_name);
+    template<typename T, typename F>
+    std::vector<int> order(const std::string& col_name, F f);
 private:
     template<typename... Types, typename F>
     void invoke_at(int pos, F&& f) {
@@ -251,7 +262,7 @@ void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const st
     //print_index<Args...>({0, 1});
 }
 template<typename T>
-std::vector<int> data_frame::order(const std::string col_name) {
+std::vector<int> data_frame::order(const std::string& col_name) {
     if (!col_names_map.count(col_name)) return {};
     if (type_map[col_name] != typeid(T).name()) return {};
     auto iter = col_names_map.find(col_name);
@@ -264,6 +275,24 @@ std::vector<int> data_frame::order(const std::string col_name) {
     }
     auto cmp = [&](int& l, int& r) -> bool {
         return tmp_vector[l] > tmp_vector[r];
+    };
+    std::sort(tmp_index.begin(), tmp_index.end(), cmp);
+    return tmp_index;
+}
+template<typename T, typename F>
+std::vector<int> data_frame::order(const std::string& col_name, F f) {
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < tmp_vector.size(); i++) {
+        tmp_index.push_back(i);
+    }
+    auto cmp = [&](int& l, int& r) -> bool {
+        return f(tmp_vector[l], tmp_vector[r]);
     };
     std::sort(tmp_index.begin(), tmp_index.end(), cmp);
     return tmp_index;
@@ -293,8 +322,28 @@ public:
             internal_index.push_back(index(i));
     }
     template<typename F>
-    void apply_with_index(const std::vector<int>& index, F f) {
+    data_frame_view<TypeLists, Types...> apply_with_index(const std::vector<int>& index, F f) {
         data_frame_ptr->apply_with_index(index, f, TypeLists<Types...>{});
+        return *this;
+    }
+    void print_with_index(const std::vector<int>& index) {
+        data_frame_ptr->print_with_index(index, TypeLists<Types...>{});
+    }
+    void print_with_range(const range& index) {
+        data_frame_ptr->print_with_range(index, TypeLists<Types...>{});
+    }
+    void print_with_slice(const slice& index) {
+        data_frame_ptr->print_with_slice(index, TypeLists<Types...>{});
+    }
+    template<typename T>
+    data_frame_view<TypeLists, Types...> sort(const std::string& col_name) {
+        data_frame_ptr->sort<T>(col_name, TypeLists<Types...>{});
+        return *this;
+    }
+    template<typename T, typename F>
+    data_frame_view<TypeLists, Types...> sort(const std::string& col_name, F f) {
+        data_frame_ptr->sort<T>(col_name, f, TypeLists<Types...>{});
+        return *this;
     }
 private: 
     std::vector<int> internal_index;
