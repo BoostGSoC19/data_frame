@@ -24,9 +24,14 @@ public:
     bool add_column(std::string col_name, std::vector<T> tmp_vec);
     template<class... Args>
     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
+    template<typename T>
+    T& get(const std::string& col_name, size_t pos);
+    template<typename T>
+    const T& get_c(const std::string& col_name, size_t pos) const;
+
     template<typename Col_type, typename F, template<class...> class TypeLists, class... Types>
     data_frame_view<TypeLists, Types...> select(const std::string& col_name, F f, TypeLists<Types...>) {
-        const std::vector<int>& new_order = filter<Col_type>(col_name);
+        const std::vector<int>& new_order = filter<Col_type>(col_name, f);
         return create_view_with_index(std::move(new_order), TypeLists<Types...>{});
     }
     template<typename Col_type, template<class...> class TypeLists, class... Types>
@@ -167,9 +172,9 @@ public:
     std::vector<int> order(const std::string& col_name);
     template<typename T, typename F>
     std::vector<int> order(const std::string& col_name, F f);
+private:
     template<typename T, typename F>
     std::vector<int> filter(const std::string& col_name, F f);
-private:
     template<typename... Types, typename F>
     void invoke_at(int pos, F&& f) {
         for (auto iter: col_names_map) {
@@ -319,6 +324,23 @@ std::vector<int> data_frame::filter(const std::string& col_name, F f) {
     }
     return tmp_index;
 }
+template<typename T>
+T& data_frame::get(const std::string& col_name, size_t pos) {
+    // need to handle the case when col_name doesn't exist
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.get_vector<T>();
+    return tmp_vector[pos];
+}
+template<typename T>
+const T& data_frame::get_c(const std::string& col_name, size_t pos) const {
+    // need to handle the case when col_name doesn't exist
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.get_vector<T>();
+    return tmp_vector[pos];
+}
+
 template<template<class...> class TypeLists, class... Types>
 class data_frame_view {
 public:
@@ -373,6 +395,20 @@ public:
     data_frame_view<TypeLists, Types...>& select(const std::string& col_name, F f) {
         data_frame_ptr->select<T>(col_name, f, TypeLists<Types...>{});
         return *this;
+    }
+    template<typename T>
+    T& get(const std::string& col_name, size_t pos) {
+        return data_frame_ptr->get<T>(col_name, pos);
+    }
+    template<typename T>
+    const T& get_c(const std::string& col_name, size_t pos) {
+        return data_frame_ptr->get_c<T>(col_name, pos);
+    }
+    size_t get_cur_rows() {
+        return internal_index.size();
+    }
+    size_t get_cur_cols() {
+        return data_frame_ptr->get_cur_cols();
     }
 private: 
     std::vector<int> internal_index;
