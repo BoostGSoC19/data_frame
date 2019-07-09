@@ -75,15 +75,16 @@ TEST(Data_frame, sort_with_index_test) {
     auto cur_view = df4.select<long>("long_vec", [](long curVal) {
                             return curVal >= 40;
                         }, type_collection{})
-                        .apply_with_index({0, 1}, [](auto& t) {
+                        .apply_with_index({0, 1, 2}, [](auto& t) {
                             return t * 2;
                         });
+    
     auto& new_view = cur_view.sort<long>("long_vec");
     EXPECT_EQ(new_view.get<long>("long_vec", 0), 20);
     EXPECT_EQ(new_view.get<long>("long_vec", 1), 80);
     EXPECT_EQ(new_view.get<double>("double_vec", 0), 6.6);
     auto& new_view2 = cur_view.sort<double>("double_vec");
     // This sort function is still not correct
-    EXPECT_EQ(new_view.get<double>("double_vec", 0), 4.4);
-    EXPECT_EQ(new_view.get<double>("double_vec", 1), 6.6);
+    EXPECT_EQ(new_view.get<double>("double_vec", 0), 6.6);
+    EXPECT_EQ(new_view.get<double>("double_vec", 1), 4.4);
 }
