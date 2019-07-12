@@ -376,7 +376,14 @@ data_frame(int rows, TypeLists<InnerTypes...>) -> data_frame<InnerTypes...>;
 template<class... Types>
 decltype(auto) make_from_tuples(const std::vector<std::tuple<Types...>>& t, const std::vector<std::string>& names) {
     using type_collection = type_list<Types...>::types;
-    
+    assert(sizeof...(Types) == names.size());
+    cur_rows = t.size();
+    data_frame df(cur_rows, type_collection{});
+    df.init_columns(t[0], names, cur_rows);
+    for (int i = 0; i < cur_rows; i++) {
+        from_tuple(t[i], names, i);
+    }
+    return df;
 }
 template<class... Types>
 class data_frame_view {
