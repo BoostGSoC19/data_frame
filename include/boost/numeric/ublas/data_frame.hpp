@@ -148,48 +148,45 @@ public:
         }
         return new_df;
     }
-//     template<typename F, template<class...> class TypeLists, class... Types>
-//     void apply_with_index(const std::vector<int>& index, F f, TypeLists<Types...>) {
-//         int len = index.size();
-//         for (int i = 0; i < len; i++) {
-//             apply_at<Types...>(index[i], [this, functor = f](auto& in){
-//                 in = functor(in);
-//             });
-//         }
-//     }
-//     template<template<class...> class TypeLists, class... Types>
-//     void print_with_index(const std::vector<int>& index, TypeLists<Types...>) {
-//         int len = index.size();
-//         for (int i = 0; i < len; i++) {
-//             std::cout << "index " << index[i] <<": ";
-//             apply_at<Types...>(index[i], [this](auto& in){
-//                 std::cout << in << " ";
-//             });
-//             std::cout << '\n';
-//         }
-//     }
-//     template<template<class...> class TypeLists, class... Types>
-//     void print_with_range(const range& index, TypeLists<Types...>) {
-//         int len = index.size();
-//         for (int i = 0; i < len; i++) {
-//             std::cout << "index " << index(i) <<": ";
-//             apply_at<Types...>(index(i), [this](auto& in){
-//                 std::cout << in << " ";
-//             });
-//             std::cout << '\n';
-//         }
-//     }
-//     template<template<class...> class TypeLists, class... Types>
-//     void print_with_slice(const slice& index, TypeLists<Types...>) {
-//         int len = index.size();
-//         for (int i = 0; i < len; i++) {
-//             std::cout << "index " << index(i) <<": ";
-//             apply_at<Types...>(index(i), [this](auto& in){
-//                 std::cout << in << " ";
-//             });
-//             std::cout << '\n';
-//         }
-//     }
+    template<typename F>
+    void apply_with_index(const std::vector<int>& index, F f) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            apply_at(index[i], [this, functor = f](auto& in){
+                in = functor(in);
+            });
+        }
+    }
+    void print_with_index(const std::vector<int>& index) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            std::cout << "index " << index[i] <<": ";
+            apply_at(index[i], [this](auto& in){
+                std::cout << in << " ";
+            });
+            std::cout << '\n';
+        }
+    }
+    void print_with_range(const range& index) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            std::cout << "index " << index(i) <<": ";
+            apply_at(index(i), [this](auto& in){
+                std::cout << in << " ";
+            });
+            std::cout << '\n';
+        }
+    }
+    void print_with_slice(const slice& index) {
+        int len = index.size();
+        for (int i = 0; i < len; i++) {
+            std::cout << "index " << index(i) <<": ";
+            apply_at(index(i), [this](auto& in){
+                std::cout << in << " ";
+            });
+            std::cout << '\n';
+        }
+    }
     int get_cur_rows() {
         return cur_rows;
     }
@@ -211,14 +208,14 @@ public:
             container.fill_data_at(pos, col_name, std::move(f), typename type_list<Types...>::types{});
         }
     }
-//     template<typename... Types, typename F>
-//     void apply_at(int pos, F f) {
-//       for (auto iter: col_names_map) {
-//             const auto& col_name = iter.first;
-//             auto& container = *(iter.second);
-//             container.apply_at(pos, std::move(f), typename type_list<Types...>::types{});
-//         }
-//     }
+    template<typename F>
+    void apply_at(int pos, F f) {
+      for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            auto& container = *(iter.second);
+            container.apply_at(pos, std::move(f), typename type_list<Types...>::types{});
+        }
+    }
     template<typename F>
     void initialize(const std::string& col_name, int len, F f) {
         auto& container = col_names_map[col_name];
