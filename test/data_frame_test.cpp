@@ -11,7 +11,6 @@
 #include "data_frame.hpp"
 using namespace boost::numeric::ublas;
 using namespace std::string_literals;
-/* will be replaced by unit test frame work */
 TEST(Data_frame, adding_column) {
     using type_collection = type_list<int, std::string>::types;  
     std::vector<int> int_vec = {0, 1, 2, 3, 4};
@@ -26,13 +25,13 @@ TEST(Data_frame, initialize_from_tuple) {
     using namespace std::string_literals;
     auto df1 = make_from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 
                                             std::make_tuple(2, 2.2, "world"s), 
-                                            std::make_tuple(3, 1.1, "bili"s)}, 
+                                            std::make_tuple(3, 1.1, "github"s)}, 
                                             {"int_vec", "double_vec", "str_vec"});
     EXPECT_EQ(df1->get_cur_rows(), 3);
     EXPECT_EQ(df1->get_cur_cols(), 3);
     auto* df2 = make_from_tuples({  {0, 3.4, "hello"s}, 
                                     {2, 2.2, "world"s}, 
-                                    {3, 1.1, "bili"s}   }, 
+                                    {3, 1.1, "github"s}   }, 
                                     {"int_vec", "double_vec", "str_vec"}, 
                                     std::tuple<int, double, std::string>{});
     EXPECT_EQ(df2->get_cur_rows(), 3);
@@ -42,7 +41,7 @@ TEST(Data_frame, initialize_from_tuple) {
     using data_frame_type = decltype(type_builder)::data_frame_type;
     data_frame_type* df3 = make_from_tuples({   {1, 3.3, "hello"s}, 
                                                 {2, 2.2, "world"s}, 
-                                                {3, 1.1, "bili"s}   }, 
+                                                {3, 1.1, "github"s}   }, 
                                                 {"int_vec", "double_vec", "str_vec"}, 
                                                 type_collection{});
     EXPECT_EQ(df3->get_cur_rows(), 3);
@@ -58,7 +57,7 @@ TEST(Data_frame, initialize_from_tuple) {
     data_frame df5(type_collection{});
     df5.from_tuples({   {1, 3.3, "hello"s}, 
                         {2, 2.2, "world"s}, 
-                        {3, 1.1, "bili"s}   }, 
+                        {3, 1.1, "github"s}   }, 
                         {"int_vec", "double_vec", "str_vec"}, 
                         type_collection{});
     EXPECT_EQ(df5.get_cur_rows(), 3);

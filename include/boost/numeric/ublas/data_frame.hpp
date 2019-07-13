@@ -91,66 +91,63 @@ public:
 //     data_frame_view<TypeLists, Types...> create_view_with_slice(const slice& s, TypeLists<Types...>) {
 //         return data_frame_view(this, s, TypeLists<Types...>{});
 //     }
-//     template<template<class...> class TypeLists, class... Types>
-//     data_frame copy_with_index(const std::vector<int>& index, TypeLists<Types...>) {
-//         int len = index.size();
-//         data_frame new_df;
-//         for (auto iter: col_names_map) {
-//             const auto& col_name = iter.first;
-//             initialize<Types...>(col_name, len, [&new_df, col_name, len](auto& in) mutable {
-//                 new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
-//             });
-//         }
-//         for (int i = 0; i < len; i++) {
-//             invoke_at<Types...>(index[i], [&new_df, i](auto& in, const std::string& col_name) mutable {
-//                 auto iter = new_df.col_names_map.find(col_name);
-//                 if (iter == new_df.col_names_map.end()) return;
-//                 auto& container = *(iter->second);
-//                 container.at<std::decay_t<decltype(in)>>(i) = in;
-//             });
-//         }
-//         return new_df;
-//     }
-//     template<template<class...> class TypeLists, class... Types>
-//     data_frame copy_with_range(const range& r, TypeLists<Types...>) {
-//         int len = r.size();
-//         data_frame new_df;
-//         for (auto iter: col_names_map) {
-//             const auto& col_name = iter.first;
-//             initialize<Types...>(col_name, len, [&new_df, col_name, len](auto& in) mutable {
-//                 new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
-//             });
-//         }
-//         for (int i = 0; i < len; i++) {
-//             invoke_at<Types...>(r(i), [&new_df, i](auto& in, const std::string& col_name) mutable {
-//                 auto iter = new_df.col_names_map.find(col_name);
-//                 if (iter == new_df.col_names_map.end()) return;
-//                 auto& container = *(iter->second);
-//                 container.at<std::decay_t<decltype(in)>>(i) = in;
-//             });
-//         }
-//         return new_df;
-//     }
-//     template<template<class...> class TypeLists, class... Types>
-//     data_frame copy_with_slice(const slice& s, TypeLists<Types...>) {
-//         int len = s.size();
-//         data_frame new_df;
-//         for (auto iter: col_names_map) {
-//             const auto& col_name = iter.first;
-//             initialize<Types...>(col_name, len, [&new_df, col_name, len](auto& in) mutable {
-//                 new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
-//             });
-//         }
-//         for (int i = 0; i < len; i++) {
-//             invoke_at<Types...>(s(i), [&new_df, i](auto& in, const std::string& col_name) mutable {
-//                 auto iter = new_df.col_names_map.find(col_name);
-//                 if (iter == new_df.col_names_map.end()) return;
-//                 auto& container = *(iter->second);
-//                 container.at<std::decay_t<decltype(in)>>(i) = in;
-//             });
-//         }
-//         return new_df;
-//     }
+    data_frame copy_with_index(const std::vector<int>& index) {
+        int len = index.size();
+        data_frame new_df;
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
+                new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
+            });
+        }
+        for (int i = 0; i < len; i++) {
+            invoke_at(index[i], [&new_df, i](auto& in, const std::string& col_name) mutable {
+                auto iter = new_df.col_names_map.find(col_name);
+                if (iter == new_df.col_names_map.end()) return;
+                auto& container = *(iter->second);
+                container.data_frame_col::template at<std::decay_t<decltype(in)>>(i) = in;
+            });
+        }
+        return new_df;
+    }
+    data_frame copy_with_range(const range& r) {
+        int len = r.size();
+        data_frame new_df;
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
+                new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
+            });
+        }
+        for (int i = 0; i < len; i++) {
+            invoke_at(r(i), [&new_df, i](auto& in, const std::string& col_name) mutable {
+                auto iter = new_df.col_names_map.find(col_name);
+                if (iter == new_df.col_names_map.end()) return;
+                auto& container = *(iter->second);
+                container.data_frame_col::template at<std::decay_t<decltype(in)>>(i) = in;
+            });
+        }
+        return new_df;
+    }
+    data_frame copy_with_slice(const slice& s) {
+        int len = s.size();
+        data_frame new_df;
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
+                new_df.init_column<std::decay_t<decltype(in)>>(col_name, len);
+            });
+        }
+        for (int i = 0; i < len; i++) {
+            invoke_at(s(i), [&new_df, i](auto& in, const std::string& col_name) mutable {
+                auto iter = new_df.col_names_map.find(col_name);
+                if (iter == new_df.col_names_map.end()) return;
+                auto& container = *(iter->second);
+                container.data_frame_col::template at<std::decay_t<decltype(in)>>(i) = in;
+            });
+        }
+        return new_df;
+    }
 //     template<typename F, template<class...> class TypeLists, class... Types>
 //     void apply_with_index(const std::vector<int>& index, F f, TypeLists<Types...>) {
 //         int len = index.size();
@@ -206,14 +203,14 @@ public:
 // private:
 //     template<typename T, typename F>
 //     std::vector<int> filter(const std::string& col_name, F f);
-//     template<typename... Types, typename F>
-//     void invoke_at(int pos, F&& f) {
-//         for (auto iter: col_names_map) {
-//             const auto& col_name = iter.first;
-//             auto& container = *(iter.second);
-//             container.fill_data_at(pos, col_name, std::move(f), typename type_list<Types...>::types{});
-//         }
-//     }
+    template<typename F>
+    void invoke_at(int pos, F&& f) {
+        for (auto iter: col_names_map) {
+            const auto& col_name = iter.first;
+            auto& container = *(iter.second);
+            container.fill_data_at(pos, col_name, std::move(f), typename type_list<Types...>::types{});
+        }
+    }
 //     template<typename... Types, typename F>
 //     void apply_at(int pos, F f) {
 //       for (auto iter: col_names_map) {
@@ -222,11 +219,11 @@ public:
 //             container.apply_at(pos, std::move(f), typename type_list<Types...>::types{});
 //         }
 //     }
-//     template<typename... Types, typename F>
-//     void initialize(const std::string& col_name, int len, F f) {
-//         auto& container = col_names_map[col_name];
-//         container->initialize(std::move(f), typename type_list<Types...>::types{});
-//     }
+    template<typename F>
+    void initialize(const std::string& col_name, int len, F f) {
+        auto& container = col_names_map[col_name];
+        container->initialize(std::move(f), typename type_list<Types...>::types{});
+    }
     template<class... Args>
     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
         for_each_in_tuple(t, [this, row](auto t, std::string name){
