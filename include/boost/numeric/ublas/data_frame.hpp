@@ -34,6 +34,7 @@ public:
     using name_map_t = std::unordered_map<std::string, typename std::list<data_frame_col>::iterator>;
     using type_map_t = std::unordered_map<std::string, std::string>;
     // InnerTypes must be unique
+    data_frame(): cur_rows(-1) { }
     template<template<class...> class TypeLists, class... InnerTypes>
     data_frame(TypeLists<InnerTypes...>): cur_rows(-1) { }
     template<template<class...> class TypeLists, class... InnerTypes>
@@ -86,9 +87,9 @@ public:
     data_frame_view<Types...> create_view_with_slice(const slice& s) {
         return data_frame_view(this, s, typename type_list<Types...>::types{});
     }
-    data_frame copy_with_index(const std::vector<int>& index) {
+    data_frame<Types...> copy_with_index(const std::vector<int>& index) {
         int len = index.size();
-        data_frame new_df;
+        data_frame<Types...> new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
@@ -105,9 +106,9 @@ public:
         }
         return new_df;
     }
-    data_frame copy_with_range(const range& r) {
+    data_frame<Types...> copy_with_range(const range& r) {
         int len = r.size();
-        data_frame new_df;
+        data_frame<Types...> new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
@@ -124,9 +125,9 @@ public:
         }
         return new_df;
     }
-    data_frame copy_with_slice(const slice& s) {
+    data_frame<Types...> copy_with_slice(const slice& s) {
         int len = s.size();
-        data_frame new_df;
+        data_frame<Types...> new_df;
         for (auto iter: col_names_map) {
             const auto& col_name = iter.first;
             initialize(col_name, len, [&new_df, col_name, len](auto& in) mutable {
