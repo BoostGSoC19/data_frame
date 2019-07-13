@@ -10,13 +10,26 @@
 #include <initializer_list>
 #include <tuple>
 #include <typeinfo>
+#include <memory>
 namespace boost { namespace numeric { namespace ublas {	
+template<class... Types>
+class data_frame;
+template<typename... Types>
+struct data_frame_type_builder {
+    template<template<class...> class TypeLists, class... InnerTypes>
+    constexpr data_frame_type_builder(TypeLists<InnerTypes...>){}
+    using data_frame_type = data_frame<Types...>;
+};
+template<template<class...> class TypeLists, class... InnerTypes>
+data_frame_type_builder(TypeLists<InnerTypes...>) -> data_frame_type_builder<InnerTypes...>;
+
 template<class... Types>
 class data_frame_view;
 
 template<class... Types>
 class data_frame {
 public:
+    using data_frame_type = data_frame<Types...>;
     using store_t = std::list<data_frame_col>;
     using name_map_t = std::unordered_map<std::string, typename std::list<data_frame_col>::iterator>;
     using type_map_t = std::unordered_map<std::string, std::string>;
@@ -352,7 +365,7 @@ const T& data_frame<Types...>::get_c(const std::string& col_name, size_t pos) co
 }
 // A non-deduced context from tuple inside vector to make_from_tuples, have to provide additional parameter
 template<template<class...> class TypeLists, class... InnerTypes>
-decltype(auto) make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std::vector<std::string>& names) {
+auto make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std::vector<std::string>& names) {
     using type_collection = typename type_list<InnerTypes...>::types;
     assert(sizeof...(InnerTypes) == names.size());
     int cur_rows = t.size();
@@ -363,15 +376,15 @@ decltype(auto) make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, 
     return df;
 }
 template<template<class...> class TypeLists, class... InnerTypes>
-decltype(auto) make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
+auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
     TypeLists<InnerTypes...>) {
     using type_collection = typename type_list<InnerTypes...>::types;
     assert(sizeof...(InnerTypes) == names.size());
     int cur_rows = t.size();
-    data_frame df(cur_rows, type_collection{});
-    df.init_columns(t[0], names, cur_rows);
+    auto df = new data_frame(cur_rows, type_collection{});
+    df->init_columns(t[0], names, cur_rows);
     for (int i = 0; i < cur_rows; i++)
-        df.from_tuple(t[i], names, i);
+        df->from_tuple(t[i], names, i);
     return df;
 }
 
