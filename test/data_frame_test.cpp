@@ -22,45 +22,30 @@ TEST(Data_frame, adding_column) {
     EXPECT_EQ(df.get_cur_rows(), 5);
     EXPECT_EQ(df.get_cur_cols(), 2);
 }
-// TEST(Data_frame, initialize_from_tuple) {
-//     data_frame df2;
-//     df2.from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 
-//                                 std::make_tuple(2, 2.2, "world"s), 
-//                                 std::make_tuple(3, 1.1, "bili"s)}, 
-//                                {"int_vec", "double_vec", "str_vec"});
-//     EXPECT_EQ(df2.get_cur_rows(), 3);
-//     EXPECT_EQ(df2.get_cur_cols(), 3);
-//     data_frame df3;
-//     df3.from_tuples<int, double, std::string>({{1, 3.3, "hello"s}, 
-//                                 {2, 2.2, "world"s}, 
-//                                 {3, 1.1, "bili"s}}, 
-//                                 {"int_vec", "double_vec", "str_vec"});
-//     EXPECT_EQ(df3.get_cur_rows(), 3);
-//     EXPECT_EQ(df3.get_cur_cols(), 3);
-//     data_frame df4;
-//     /**
-//      *  df4.from_tuples({{0, 3.4, "hello"s}
-//      *                   {2, 2.2, "world"s}, 
-//      *                   {3, 1.1, "bili"s}}, 
-//      *                   {"int_vec", "double_vec", "str_vec"});
-//      */
-//     std::tuple t{0, 3.4, "hello"s};
-//     df4.from_tuples({t, 
-//                     {2, 2.2, "world"s}, 
-//                     {3, 1.1, "bilibili"s}}, 
-//                     {"int_vec", "double_vec", "str_vec"});
-//     EXPECT_EQ(df4.get_cur_rows(), 3);
-//     EXPECT_EQ(df4.get_cur_cols(), 3);
-//     data_frame df5;
-//     using type_collection = type_list<int, double, std::string>::types; 
-//     df5.from_tuples({{1, 3.3, "hello"s}, 
-//                      {2, 2.2, "world"s}, 
-//                      {3, 1.1, "bili"s}}, 
-//                      {"int_vec", "double_vec", "str_vec"}, 
-//                      type_collection{});
-//     EXPECT_EQ(df5.get_cur_rows(), 3);
-//     EXPECT_EQ(df5.get_cur_cols(), 3);
-// }
+TEST(Data_frame, initialize_from_tuple) {
+    using namespace std::string_literals;
+    data_frame df1 = make_from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 
+                                                  std::make_tuple(2, 2.2, "world"s), 
+                                                  std::make_tuple(3, 1.1, "bili"s)}, 
+                                                  {"int_vec", "double_vec", "str_vec"});
+    EXPECT_EQ(df1.get_cur_rows(), 3);
+    EXPECT_EQ(df1.get_cur_cols(), 3);
+    data_frame df2 = make_from_tuples({{0, 3.4, "hello"s}, 
+                                       {2, 2.2, "world"s}, 
+                                       {3, 1.1, "bili"s}}, 
+                                       {"int_vec", "double_vec", "str_vec"}, 
+                                       std::tuple<int, double, std::string>{});
+    EXPECT_EQ(df2.get_cur_rows(), 3);
+    EXPECT_EQ(df2.get_cur_cols(), 3);
+    using type_collection = type_list<int, double, std::string>::original_types; 
+    data_frame df3 = make_from_tuples({{1, 3.3, "hello"s}, 
+                                       {2, 2.2, "world"s}, 
+                                       {3, 1.1, "bili"s}}, 
+                                       {"int_vec", "double_vec", "str_vec"}, 
+                                       type_collection{});
+    EXPECT_EQ(df3.get_cur_rows(), 3);
+    EXPECT_EQ(df3.get_cur_cols(), 3);
+}
 // TEST(Data_frame, sort_with_single_column) {
 //     data_frame df2;
 //     df2.from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 

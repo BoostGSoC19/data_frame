@@ -40,12 +40,10 @@ public:
 //     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
 //     template<class... Args>
 //     void from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names);
-//     template<template<class...> class TypeLists, class... Args>
-//     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>);
-//     template<typename T>
-//     T& get(const std::string& col_name, size_t pos);
-//     template<typename T>
-//     const T& get_c(const std::string& col_name, size_t pos) const;
+    template<typename T>
+    T& get(const std::string& col_name, size_t pos);
+    template<typename T>
+    const T& get_c(const std::string& col_name, size_t pos) const;
 
 //     template<typename Col_type, typename F, template<class...> class TypeLists, class... Types>
 //     data_frame_view<TypeLists, Types...> select(const std::string& col_name, F f, TypeLists<Types...>) {
@@ -214,45 +212,31 @@ public:
 //         auto& container = col_names_map[col_name];
 //         container->initialize(std::move(f), typename type_list<Types...>::types{});
 //     }
-//     template<class... Args>
-//     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
-//         for_each_in_tuple(t, tuple_functor(this, row), names);
-//     }
-//     template<typename T, typename F, std::size_t ... Is>
-//     void for_each(T&& t, F f, std::index_sequence<Is...>, const std::vector<std::string>& names) {
-//         auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
-//     }
-//     template<typename... Ts, typename F>
-//     void for_each_in_tuple(std::tuple<Ts...> const& t, F f, const std::vector<std::string>& names) {
-//         for_each(t, f, std::index_sequence_for<Ts...>{}, names);
-//     }
-//     struct tuple_functor {
-//         tuple_functor(data_frame* df, int index): df(df), index(index) {}
-//         template<typename T>
-//         void operator () (T t, std::string name) {
-//             auto iter = df->col_names_map.find(name);
-//             if (iter == df->col_names_map.end()) return;
-//             auto& container = *(iter->second);
-//             container.at<T>(index) = t;
-//         }
-//         int index;
-//         data_frame* df;
-//     };
-//     struct tuple_create_functor {
-//         tuple_create_functor(int size, data_frame* df): size(size) ,df(df){}
-//         template<typename T>
-//         void operator () (T t, const std::string& name) {
-//             df->init_column<T>(name, size);
-//         }
-//         int size;
-//         data_frame* df;
-//     };
-//     template<typename T>
-//     bool init_column(const std::string& col_name, int size);
-//     template<class... Args>
-//     void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
-//         for_each_in_tuple(t, tuple_create_functor(size, this), names);
-//     }
+    template<class... Args>
+    void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
+        for_each_in_tuple(t, [this, row](auto t, std::string name){
+            auto iter = this->col_names_map.find(name);
+            if (iter == this->col_names_map.end()) return;
+            auto& container = *(iter->second);
+            container.data_frame_col::template at<decltype(t)>(row) = t;   
+        }, names);
+    }
+    template<typename T, typename F, std::size_t ... Is>
+    void for_each(T&& t, F f, std::index_sequence<Is...>, const std::vector<std::string>& names) {
+        auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
+    }
+    template<typename... Ts, typename F>
+    void for_each_in_tuple(std::tuple<Ts...> const& t, F f, const std::vector<std::string>& names) {
+        for_each(t, f, std::index_sequence_for<Ts...>{}, names);
+    }
+    template<typename T>
+    bool init_column(const std::string& col_name, int size);
+    template<class... Args>
+    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
+        for_each_in_tuple(t, [this, size](auto t, const std::string& cur_name) {
+            this->init_column<decltype(t)>(cur_name, size);
+        }, names);
+    }
     int cur_rows;
     store_t vals;
     /* col_names_map and type_map should maintain consistent */
@@ -265,29 +249,18 @@ data_frame(TypeLists<InnerTypes...>) -> data_frame<InnerTypes...>;
 template<template<class...> class TypeLists, class... InnerTypes>
 data_frame(int rows, TypeLists<InnerTypes...>) -> data_frame<InnerTypes...>;
 
-// template<typename T>
-// bool data_frame::add_column(std::string col_name, std::vector<T> tmp_vec) {
-//     if (col_names_map.count(col_name)) return false;
-//     /* size check */
-//     if (cur_rows == -1) cur_rows = tmp_vec.size();
-//     if (cur_rows != tmp_vec.size()) return false;
-//     data_frame_col dfc(col_name, tmp_vec);
-//     auto iter = vals.insert(vals.end(), dfc);
-//     col_names_map.insert({col_name, iter});
-//     type_map.insert({col_name, typeid(T).name()});
-//     return true;
-// }
-// template<typename T>
-// bool data_frame::init_column(const std::string& col_name, int size) {
-//     if (col_names_map.count(col_name)) return false;
-//     /* size check */
-//     if (cur_rows == -1) cur_rows = size;
-//     if (cur_rows != size) return false;
-//     auto iter = vals.insert(vals.begin(), data_frame_col(col_name, std::vector<T>(size)));
-//     col_names_map.insert({col_name, iter});
-//     type_map.insert({col_name, typeid(T).name()});
-//     return true;
-// }
+template<class... Types>
+template<typename T>
+bool data_frame<Types...>::init_column(const std::string& col_name, int size) {
+    if (col_names_map.count(col_name)) return false;
+    /* size check */
+    if (cur_rows == -1) cur_rows = size;
+    if (cur_rows != size) return false;
+    auto iter = vals.insert(vals.begin(), data_frame_col(col_name, std::vector<T>(size)));
+    col_names_map.insert({col_name, iter});
+    type_map.insert({col_name, typeid(T).name()});
+    return true;
+}
 // template<class... Args>
 // void data_frame::from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names) {
 //     std::vector<std::tuple<Args...>> vec(t);
@@ -357,34 +330,51 @@ data_frame(int rows, TypeLists<InnerTypes...>) -> data_frame<InnerTypes...>;
 //     }
 //     return tmp_index;
 // }
-// template<typename T>
-// T& data_frame::get(const std::string& col_name, size_t pos) {
-//     // need to handle the case when col_name doesn't exist
-//     auto iter = col_names_map.find(col_name);
-//     auto& container = *(iter->second);
-//     auto& tmp_vector = container.get_vector<T>();
-//     return tmp_vector[pos];
-// }
-// template<typename T>
-// const T& data_frame::get_c(const std::string& col_name, size_t pos) const {
-//     // need to handle the case when col_name doesn't exist
-//     auto iter = col_names_map.find(col_name);
-//     auto& container = *(iter->second);
-//     auto& tmp_vector = container.get_vector<T>();
-//     return tmp_vector[pos];
-// }
 template<class... Types>
-decltype(auto) make_from_tuples(const std::vector<std::tuple<Types...>>& t, const std::vector<std::string>& names) {
-    using type_collection = type_list<Types...>::types;
-    assert(sizeof...(Types) == names.size());
-    cur_rows = t.size();
+template<typename T>
+T& data_frame<Types...>::get(const std::string& col_name, size_t pos) {
+    // need to handle the case when col_name doesn't exist
+    static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.data_frame_col::template get_vector<T>();
+    return tmp_vector[pos];
+}
+template<class... Types>
+template<typename T>
+const T& data_frame<Types...>::get_c(const std::string& col_name, size_t pos) const {
+    // need to handle the case when col_name doesn't exist
+    static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.data_frame_col::template get_vector<T>();
+    return tmp_vector[pos];
+}
+// A non-deduced context from tuple inside vector to make_from_tuples, have to provide additional parameter
+template<template<class...> class TypeLists, class... InnerTypes>
+decltype(auto) make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std::vector<std::string>& names) {
+    using type_collection = typename type_list<InnerTypes...>::types;
+    assert(sizeof...(InnerTypes) == names.size());
+    int cur_rows = t.size();
     data_frame df(cur_rows, type_collection{});
     df.init_columns(t[0], names, cur_rows);
-    for (int i = 0; i < cur_rows; i++) {
-        from_tuple(t[i], names, i);
-    }
+    for (int i = 0; i < cur_rows; i++)
+        df.from_tuple(t[i], names, i);
     return df;
 }
+template<template<class...> class TypeLists, class... InnerTypes>
+decltype(auto) make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
+    TypeLists<InnerTypes...>) {
+    using type_collection = typename type_list<InnerTypes...>::types;
+    assert(sizeof...(InnerTypes) == names.size());
+    int cur_rows = t.size();
+    data_frame df(cur_rows, type_collection{});
+    df.init_columns(t[0], names, cur_rows);
+    for (int i = 0; i < cur_rows; i++)
+        df.from_tuple(t[i], names, i);
+    return df;
+}
+
 template<class... Types>
 class data_frame_view {
 public:
