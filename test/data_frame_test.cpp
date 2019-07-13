@@ -28,8 +28,8 @@ TEST(Data_frame, initialize_from_tuple) {
                                             std::make_tuple(2, 2.2, "world"s), 
                                             std::make_tuple(3, 1.1, "bili"s)}, 
                                             {"int_vec", "double_vec", "str_vec"});
-    EXPECT_EQ(df1.get_cur_rows(), 3);
-    EXPECT_EQ(df1.get_cur_cols(), 3);
+    EXPECT_EQ(df1->get_cur_rows(), 3);
+    EXPECT_EQ(df1->get_cur_cols(), 3);
     auto* df2 = make_from_tuples({  {0, 3.4, "hello"s}, 
                                     {2, 2.2, "world"s}, 
                                     {3, 1.1, "bili"s}   }, 

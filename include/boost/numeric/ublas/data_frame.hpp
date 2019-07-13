@@ -369,10 +369,10 @@ auto make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std:
     using type_collection = typename type_list<InnerTypes...>::types;
     assert(sizeof...(InnerTypes) == names.size());
     int cur_rows = t.size();
-    data_frame df(cur_rows, type_collection{});
-    df.init_columns(t[0], names, cur_rows);
+    auto df = new data_frame(cur_rows, type_collection{});
+    df->init_columns(t[0], names, cur_rows);
     for (int i = 0; i < cur_rows; i++)
-        df.from_tuple(t[i], names, i);
+        df->from_tuple(t[i], names, i);
     return df;
 }
 template<template<class...> class TypeLists, class... InnerTypes>
