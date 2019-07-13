@@ -49,10 +49,12 @@ public:
         col_names_map.insert({col_name, iter});
         type_map.insert({col_name, typeid(T).name()});
     }
-//     template<class... Args>
-//     void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
-//     template<class... Args>
-//     void from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names);
+    template<class... Args>
+    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
+    template<class... Args>
+    void from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names);
+    template<template<class...> class TypeLists, class... Args>
+    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>);
     template<typename T>
     T& get(const std::string& col_name, size_t pos);
     template<typename T>
@@ -274,24 +276,27 @@ bool data_frame<Types...>::init_column(const std::string& col_name, int size) {
     type_map.insert({col_name, typeid(T).name()});
     return true;
 }
-// template<class... Args>
-// void data_frame::from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names) {
-//     std::vector<std::tuple<Args...>> vec(t);
-//     from_tuples(vec, names);
-// }
-// template<class... Args>
-// void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names) {
-//     if (sizeof...(Args) != names.size()) return;
-//     cur_rows = t.size();
-//     init_columns(t[0], names, cur_rows);
-//     for (int i = 0; i < cur_rows; i++) {
-//         from_tuple(t[i], names, i);
-//     }
-// }
-// template<template<class...> class TypeLists, class... Args>
-// void data_frame::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>) {
-//     from_tuples<Args...>(t, names);
-// }
+template<class... Types>
+template<class... Args>
+void data_frame<Types...>::from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names) {
+    std::vector<std::tuple<Args...>> vec(t);
+    from_tuples(vec, names);
+}
+template<class... Types>
+template<class... Args>
+void data_frame<Types...>::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names) {
+    if (sizeof...(Args) != names.size()) return;
+    cur_rows = t.size();
+    init_columns(t[0], names, cur_rows);
+    for (int i = 0; i < cur_rows; i++) {
+        from_tuple(t[i], names, i);
+    }
+}
+template<class... Types>
+template<template<class...> class TypeLists, class... Args>
+void data_frame<Types...>::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>) {
+    from_tuples<Args...>(t, names);
+}
 // template<typename T>
 // std::vector<int> data_frame::order(const std::string& col_name) {
 //     if (!col_names_map.count(col_name)) return {};

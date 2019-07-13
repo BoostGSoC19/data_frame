@@ -47,6 +47,22 @@ TEST(Data_frame, initialize_from_tuple) {
                                                 type_collection{});
     EXPECT_EQ(df3->get_cur_rows(), 3);
     EXPECT_EQ(df3->get_cur_cols(), 3);
+    using type_collection = type_list<int, double, std::string>::original_types; 
+    data_frame df4(type_collection{});
+    df4.from_tuples(std::vector{std::make_tuple(1, 3.3, "hello"s), 
+                                            std::make_tuple(2, 2.2, "world"s), 
+                                            std::make_tuple(3, 1.1, "bili"s)}, 
+                                            {"int_vec", "double_vec", "str_vec"});
+    EXPECT_EQ(df4.get_cur_rows(), 3);
+    EXPECT_EQ(df4.get_cur_cols(), 3);
+    data_frame df5(type_collection{});
+    df5.from_tuples({   {1, 3.3, "hello"s}, 
+                        {2, 2.2, "world"s}, 
+                        {3, 1.1, "bili"s}   }, 
+                        {"int_vec", "double_vec", "str_vec"}, 
+                        type_collection{});
+    EXPECT_EQ(df5.get_cur_rows(), 3);
+    EXPECT_EQ(df5.get_cur_cols(), 3);
 }
 // TEST(Data_frame, sort_with_single_column) {
 //     data_frame df2;
