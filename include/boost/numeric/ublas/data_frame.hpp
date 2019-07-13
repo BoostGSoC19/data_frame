@@ -193,13 +193,28 @@ public:
     int get_cur_cols() {
         return col_names_map.size();
     }
-//     template<typename T>
-//     std::vector<int> order(const std::string& col_name);
-//     template<typename T, typename F>
-//     std::vector<int> order(const std::string& col_name, F f);
-// private:
-//     template<typename T, typename F>
-//     std::vector<int> filter(const std::string& col_name, F f);
+    template<class... Args>
+    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
+        for_each_in_tuple(t, [this, size](auto t, const std::string& cur_name) {
+            this->init_column<decltype(t)>(cur_name, size);
+        }, names);
+    }
+    template<class... Args>
+    void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
+        for_each_in_tuple(t, [this, row](auto t, std::string name){
+            auto iter = this->col_names_map.find(name);
+            if (iter == this->col_names_map.end()) return;
+            auto& container = *(iter->second);
+            container.data_frame_col::template at<decltype(t)>(row) = t;   
+        }, names);
+    }
+    template<typename T>
+    std::vector<int> order(const std::string& col_name);
+    template<typename T, typename F>
+    std::vector<int> order(const std::string& col_name, F f);
+private:
+    template<typename T, typename F>
+    std::vector<int> filter(const std::string& col_name, F f);
     template<typename F>
     void invoke_at(int pos, F&& f) {
         for (auto iter: col_names_map) {
@@ -221,15 +236,6 @@ public:
         auto& container = col_names_map[col_name];
         container->initialize(std::move(f), typename type_list<Types...>::types{});
     }
-    template<class... Args>
-    void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
-        for_each_in_tuple(t, [this, row](auto t, std::string name){
-            auto iter = this->col_names_map.find(name);
-            if (iter == this->col_names_map.end()) return;
-            auto& container = *(iter->second);
-            container.data_frame_col::template at<decltype(t)>(row) = t;   
-        }, names);
-    }
     template<typename T, typename F, std::size_t ... Is>
     void for_each(T&& t, F f, std::index_sequence<Is...>, const std::vector<std::string>& names) {
         auto l = { (f(std::get<Is>(t), names[Is]), 0)... };
@@ -240,12 +246,7 @@ public:
     }
     template<typename T>
     bool init_column(const std::string& col_name, int size);
-    template<class... Args>
-    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
-        for_each_in_tuple(t, [this, size](auto t, const std::string& cur_name) {
-            this->init_column<decltype(t)>(cur_name, size);
-        }, names);
-    }
+
     int cur_rows;
     store_t vals;
     /* col_names_map and type_map should maintain consistent */
@@ -291,57 +292,63 @@ template<template<class...> class TypeLists, class... Args>
 void data_frame<Types...>::from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>) {
     from_tuples<Args...>(t, names);
 }
-// template<typename T>
-// std::vector<int> data_frame::order(const std::string& col_name) {
-//     if (!col_names_map.count(col_name)) return {};
-//     if (type_map[col_name] != typeid(T).name()) return {};
-//     auto iter = col_names_map.find(col_name);
-//     const auto& container = *(iter->second);
-//     const auto& tmp_vector = container.get_vector<T>();
-//     int len = tmp_vector.size();
-//     std::vector<int> tmp_index;
-//     for (int i = 0; i < tmp_vector.size(); i++) {
-//         tmp_index.push_back(i);
-//     }
-//     auto cmp = [&](int& l, int& r) -> bool {
-//         return tmp_vector[l] > tmp_vector[r];
-//     };
-//     std::sort(tmp_index.begin(), tmp_index.end(), cmp);
-//     return tmp_index;
-// }
-// template<typename T, typename F>
-// std::vector<int> data_frame::order(const std::string& col_name, F f) {
-//     if (!col_names_map.count(col_name)) return {};
-//     if (type_map[col_name] != typeid(T).name()) return {};
-//     auto iter = col_names_map.find(col_name);
-//     auto& container = *(iter->second);
-//     auto& tmp_vector = container.get_vector<T>();
-//     int len = tmp_vector.size();
-//     std::vector<int> tmp_index;
-//     for (int i = 0; i < tmp_vector.size(); i++) {
-//         tmp_index.push_back(i);
-//     }
-//     auto cmp = [&](int& l, int& r) -> bool {
-//         return f(tmp_vector[l], tmp_vector[r]);
-//     };
-//     std::sort(tmp_index.begin(), tmp_index.end(), cmp);
-//     return tmp_index;
-// }
-// template<typename T, typename F>
-// std::vector<int> data_frame::filter(const std::string& col_name, F f) {
-//     if (!col_names_map.count(col_name)) return {};
-//     if (type_map[col_name] != typeid(T).name()) return {};
-//     auto iter = col_names_map.find(col_name);
-//     auto& container = *(iter->second);
-//     auto& tmp_vector = container.get_vector<T>();
-//     int len = tmp_vector.size();
-//     std::vector<int> tmp_index;
-//     for (int i = 0; i < len; i++) {
-//         if (f(tmp_vector[i]))
-//             tmp_index.push_back(i);
-//     }
-//     return tmp_index;
-// }
+template<class... Types>
+template<typename T>
+std::vector<int> data_frame<Types...>::order(const std::string& col_name) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    const auto& container = *(iter->second);
+    const auto& tmp_vector = container.data_frame_col::template get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < tmp_vector.size(); i++) {
+        tmp_index.push_back(i);
+    }
+    auto cmp = [&](int& l, int& r) -> bool {
+        return tmp_vector[l] > tmp_vector[r];
+    };
+    std::sort(tmp_index.begin(), tmp_index.end(), cmp);
+    return tmp_index;
+}
+template<class... Types>
+template<typename T, typename F>
+std::vector<int> data_frame<Types...>::order(const std::string& col_name, F f) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.data_frame_col::template get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < tmp_vector.size(); i++) {
+        tmp_index.push_back(i);
+    }
+    auto cmp = [&](int& l, int& r) -> bool {
+        return f(tmp_vector[l], tmp_vector[r]);
+    };
+    std::sort(tmp_index.begin(), tmp_index.end(), cmp);
+    return tmp_index;
+}
+template<class... Types>
+template<typename T, typename F>
+std::vector<int> data_frame<Types...>::filter(const std::string& col_name, F f) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
+    if (!col_names_map.count(col_name)) return {};
+    if (type_map[col_name] != typeid(T).name()) return {};
+    auto iter = col_names_map.find(col_name);
+    auto& container = *(iter->second);
+    auto& tmp_vector = container.data_frame_col::template get_vector<T>();
+    int len = tmp_vector.size();
+    std::vector<int> tmp_index;
+    for (int i = 0; i < len; i++) {
+        if (f(tmp_vector[i]))
+            tmp_index.push_back(i);
+    }
+    return tmp_index;
+}
 template<class... Types>
 template<typename T>
 T& data_frame<Types...>::get(const std::string& col_name, size_t pos) {
@@ -355,7 +362,6 @@ T& data_frame<Types...>::get(const std::string& col_name, size_t pos) {
 template<class... Types>
 template<typename T>
 const T& data_frame<Types...>::get_c(const std::string& col_name, size_t pos) const {
-    // need to handle the case when col_name doesn't exist
     static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame");
     auto iter = col_names_map.find(col_name);
     auto& container = *(iter->second);
@@ -446,20 +452,20 @@ public:
 //         data_frame_ptr->select<T>(col_name, f, TypeLists<Types...>{});
 //         return *this;
 //     }
-//     template<typename T>
-//     T& get(const std::string& col_name, size_t pos) {
-//         return data_frame_ptr->get<T>(col_name, pos);
-//     }
-//     template<typename T>
-//     const T& get_c(const std::string& col_name, size_t pos) {
-//         return data_frame_ptr->get_c<T>(col_name, pos);
-//     }
-//     size_t get_cur_rows() {
-//         return internal_index.size();
-//     }
-//     size_t get_cur_cols() {
-//         return data_frame_ptr->get_cur_cols();
-//     }
+    template<typename T>
+    T& get(const std::string& col_name, size_t pos) {
+        return data_frame_ptr->data_frame<Types...>::template get<T>(col_name, pos);
+    }
+    template<typename T>
+    const T& get_c(const std::string& col_name, size_t pos) {
+        return data_frame_ptr->data_frame<Types...>::template get_c<T>(col_name, pos);
+    }
+    size_t get_cur_rows() {
+        return internal_index.size();
+    }
+    size_t get_cur_cols() {
+        return data_frame_ptr->get_cur_cols();
+    }
 private: 
     std::vector<int> internal_index;
     data_frame<Types...>* data_frame_ptr;
