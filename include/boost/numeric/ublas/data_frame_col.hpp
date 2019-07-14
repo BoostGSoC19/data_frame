@@ -12,6 +12,13 @@ struct type_list {
     using original_types = std::tuple<Typelists...>;
     using types = boost::mp11::mp_unique<original_types>;
 };
+template <template <typename...> class TypeLists1, typename... Types1, 
+          template <typename...> class TypeLists2, typename... Types2>
+auto merge_types(TypeLists1<Types1...> l, TypeLists2<Types2...> r) {
+    auto new_tuple = std::tuple_cat(l, r);
+    using types = boost::mp11::mp_unique<decltype(new_tuple)>;
+    return types{};
+}
 class data_frame_col {
 public:
     template<typename T>
@@ -32,7 +39,6 @@ public:
     template<typename T>
     T& at(size_t index) {
         // need to handle exception here
-        //std::cout << vals<T>[this].size() << std::endl;
         return vals<T>[this][index];
     }
     template<typename T>

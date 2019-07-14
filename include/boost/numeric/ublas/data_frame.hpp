@@ -38,7 +38,7 @@ public:
     template<template<class...> class TypeLists, class... InnerTypes>
     data_frame(TypeLists<InnerTypes...>): cur_rows(-1) { }
     template<template<class...> class TypeLists, class... InnerTypes>
-    data_frame(int rows, TypeLists<InnerTypes...>): cur_rows(-1) { }
+    data_frame(size_t rows, TypeLists<InnerTypes...>): cur_rows(rows) { }
     template<typename T> 
     void add_column(std::string col_name, std::vector<T> tmp_vec) {
         static_assert(((std::is_same_v<T, Types> || ...)), "New column doesn't match any of the data_frame types!");
@@ -183,10 +183,10 @@ public:
             std::cout << '\n';
         }
     }
-    int get_cur_rows() {
+    int get_cur_rows() const {
         return cur_rows;
     }
-    int get_cur_cols() {
+    int get_cur_cols() const {
         return col_names_map.size();
     }
     template<class... Args>
@@ -388,7 +388,32 @@ auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std
         df->from_tuple(t[i], names, i);
     return df;
 }
-
+template <typename T, typename... Types1, 
+                    typename... Types2>
+auto combine(const data_frame<Types1...>& l, const data_frame<Types2...>& r, const std::string& col_name) {
+    using type_collection_l = typename type_list<Types1...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int len1 = l.get_cur_rows();
+    int len2 = r.get_cur_rows();
+    std::unordered_multimap<T, size_t> valueTopos1;
+    std::unordered_multimap<T, size_t> valueTopos2;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < len1; i++) {
+        valueTopos1.insert({l.data_frame<Types1...>::template get_c<T>(col_name, i), i});
+    }
+    for (int j = 0; j < len2; j++) {
+        const T& val = r.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val)) {
+            valueTopos2.insert({val, j});
+        }
+    }
+    int rows = valueTopos2.size();
+    auto new_df = new data_frame(rows, merge_type_collection);
+    // need to iterate through one the 
+    std::cout << "New df rows: " << new_df->get_cur_rows() << std::endl;
+    return new_df;
+}
 template<class... Types>
 class data_frame_view {
 public:

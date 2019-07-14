@@ -158,3 +158,29 @@ TEST(Data_frame, apply_with_index_test) {
     });
     df4.print_with_index({0, 1, 2});
 }
+TEST(Data_frame, merge_types) {
+    using type_collection1 = type_list<double, long>::types;
+    using type_collection2 = type_list<std::string, int, double>::types;
+    auto new_tuple = merge_types(type_collection1{}, type_collection2{});
+    std::get<int>(new_tuple);
+    std::get<double>(new_tuple);
+    std::get<long>(new_tuple);
+    std::get<std::string>(new_tuple);
+}
+TEST(Data_frame, combine_data_frames) {
+    using type_collection1 = type_list<double, long>::types;
+    using type_collection2 = type_list<std::string, int, double>::types;
+    data_frame df1 = type_collection1{};
+    data_frame df2 = type_collection2{};
+    df1.from_tuples(std::vector{std::make_tuple(3.3, 10L), 
+                                std::make_tuple(2.2, 40L)}, 
+                                {"double_vec", "long_vec"});
+    df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+                                std::make_tuple(3.3, "hello"s, 10),
+                                std::make_tuple(2.2, "world"s, 40),
+                                std::make_tuple(2.2, "world"s, 40),  
+                                std::make_tuple(1.1, "bili"s, 50)}, 
+                                {"double_vec", "str_vec", "int_vec"});
+    auto df3 = combine<double>(df1, df2, "double_vec");
+    EXPECT_EQ(df3->get_cur_rows(), 4);
+}
