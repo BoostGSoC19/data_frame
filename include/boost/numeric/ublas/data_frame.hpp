@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <tuple>
 #include <typeinfo>
+#include <type_traits>
 #include <memory>
 namespace boost { namespace numeric { namespace ublas {	
 template<class... Types>
@@ -189,12 +190,20 @@ public:
     int get_cur_cols() const {
         return col_names_map.size();
     }
+    std::vector<std::string> get_col_names() const {
+        std::vector<std::string> ans;
+        for (const auto& p: type_map)
+            ans.push_back(p.first);
+        return ans;
+    }
     template<class... Args>
     void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
         for_each_in_tuple(t, [this, size](auto t, const std::string& cur_name) {
             this->init_column<decltype(t)>(cur_name, size);
         }, names);
     }
+    template<typename T>
+    bool init_column(const std::string& col_name, int size);
     template<class... Args>
     void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
         for_each_in_tuple(t, [this, row](auto t, std::string name){
@@ -204,6 +213,17 @@ public:
             container.data_frame_col::template at<decltype(t)>(row) = t;   
         }, names);
     }
+    template<typename T>
+    void remove_col(const std::string& col_name) {
+        type_map.erase(col_name);
+        auto iter = col_names_map.find(col_name);
+        if (iter == col_names_map.end()) return;
+        vals.erase(iter->second);
+        col_names_map.erase(col_name);
+    }
+    // auto get_tuple(size_t pos) {
+
+    // }
     template<typename T>
     std::vector<int> order(const std::string& col_name);
     template<typename T, typename F>
@@ -240,9 +260,12 @@ private:
     void for_each_in_tuple(std::tuple<Ts...> const& t, F f, const std::vector<std::string>& names) {
         for_each(t, f, std::index_sequence_for<Ts...>{}, names);
     }
-    template<typename T>
-    bool init_column(const std::string& col_name, int size);
 
+    // auto get_tuple_types() {
+    //     for (const auto& p: type_map) {
+            
+    //     }
+    // }
     int cur_rows;
     store_t vals;
     /* col_names_map and type_map should maintain consistent */
@@ -388,28 +411,40 @@ auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std
         df->from_tuple(t[i], names, i);
     return df;
 }
-template <typename T, typename... Types1, 
-                    typename... Types2>
-auto combine(const data_frame<Types1...>& l, const data_frame<Types2...>& r, const std::string& col_name) {
+template<typename T,
+                    typename... Types1, 
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto combine(const data_frame<Types1...>& l, const data_frame<Types2...>& r, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types1> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
     using type_collection_l = typename type_list<Types1...>::types;
     using type_collection_r = typename type_list<Types2...>::types;
     auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
-    int len1 = l.get_cur_rows();
-    int len2 = r.get_cur_rows();
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
     std::unordered_multimap<T, size_t> valueTopos1;
     std::unordered_multimap<T, size_t> valueTopos2;
     // Must iterate twice to get the number of rows in result data frame
-    for (int i = 0; i < len1; i++) {
+    for (int i = 0; i < llen; i++)
         valueTopos1.insert({l.data_frame<Types1...>::template get_c<T>(col_name, i), i});
-    }
-    for (int j = 0; j < len2; j++) {
+    for (int j = 0; j < rlen; j++) {
         const T& val = r.data_frame<Types2...>::template get_c<T>(col_name, j);
-        if (valueTopos1.count(val)) {
+        if (valueTopos1.count(val))
             valueTopos2.insert({val, j});
-        }
     }
     int rows = valueTopos2.size();
-    auto new_df = new data_frame(rows, merge_type_collection);
+    auto* new_df = new data_frame(rows, merge_type_collection);
+    using new_df_type = typename std::remove_pointer<decltype(new_df)>::type;
+    // init columns
+    new_df->init_columns(std::tuple<InnerTypes1...>{}, colnamesl, rows);
+    new_df->init_columns(std::tuple<InnerTypes2...>{}, colnamesr, rows);
     // need to iterate through one the 
     std::cout << "New df rows: " << new_df->get_cur_rows() << std::endl;
     return new_df;
