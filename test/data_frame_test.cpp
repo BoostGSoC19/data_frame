@@ -181,8 +181,10 @@ TEST(Data_frame, combine_data_frames) {
                                 std::make_tuple(2.2, "world"s, 40),  
                                 std::make_tuple(1.1, "bili"s, 50)}, 
                                 {"double_vec", "str_vec", "int_vec"});
-    auto df3 = combine<double>(df1, df2, "double_vec", std::tuple<double, long>{}, {"double_vec", "long_vec"},
-                                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    auto df3 = combine_inner<double>(df1, df2, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
     EXPECT_EQ(df3->get_cur_rows(), 4);
     EXPECT_EQ(df3->get_cur_cols(), 4);
+    df3->print_with_index({0, 1, 2, 3});
 }
