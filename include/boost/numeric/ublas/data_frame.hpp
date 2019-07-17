@@ -24,7 +24,28 @@ struct data_frame_type_builder {
 };
 template<template<class...> class TypeLists, class... InnerTypes>
 data_frame_type_builder(TypeLists<InnerTypes...>) -> data_frame_type_builder<InnerTypes...>;
-
+template<typename... Ts, typename... Types, std::size_t ... Is>
+auto for_each(const std::tuple<Ts...>& t, const data_frame<Types...>* df, 
+                const std::vector<std::string>& names, size_t pos, std::index_sequence<Is...>) {
+    return std::make_tuple(df->data_frame<Types...>::template get_c<Ts>(names[Is], pos)...);
+}
+template<typename... Types, typename... Ts>
+auto for_each_in_tuple(const std::tuple<Ts...>& t, const data_frame<Types...>* df, 
+                        const std::vector<std::string>& names, size_t pos) {
+    return for_each(t, df, names, pos, std::index_sequence_for<Ts...>{});
+}
+template<template<class...> class TypeLists, class... InnerTypes>
+auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
+    TypeLists<InnerTypes...>) {
+    using type_collection = typename type_list<InnerTypes...>::types;
+    assert(sizeof...(InnerTypes) == names.size());
+    int cur_rows = t.size();
+    auto df = new data_frame(cur_rows, type_collection{});
+    df->init_columns(t[0], names, cur_rows);
+    for (int i = 0; i < cur_rows; i++)
+        df->from_tuple(t[i], names, i);
+    return df;
+}
 template<class... Types>
 class data_frame_view;
 
@@ -62,6 +83,14 @@ public:
     T& get(const std::string& col_name, size_t pos);
     template<typename T>
     const T& get_c(const std::string& col_name, size_t pos) const;
+    data_frame_view<Types...> head(size_t n) {
+        assert(n < cur_rows);
+        return create_view_with_range(range(0, n));
+    }
+    data_frame_view<Types...> tail(size_t n) {
+        assert(n < cur_rows);
+        return create_view_with_range(range(cur_rows - n, cur_rows));
+    }
     template<typename Col_type, typename F>
     data_frame_view<Types...> select(const std::string& col_name, F f) {
         const std::vector<int>& new_order = filter<Col_type>(col_name, f);
@@ -185,6 +214,54 @@ public:
             std::cout << '\n';
         }
     }
+    template<typename T,
+                        typename... Types2, 
+                        template<class...> class TypeLists1, typename... InnerTypes1, 
+                        template<class...> class TypeLists2, typename... InnerTypes2>
+    auto combine_inner(const data_frame<Types2...>& other, 
+        const std::string& col_name, 
+        TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+        static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
+        static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+        assert(sizeof...(InnerTypes1) == colnamesl.size());
+        assert(sizeof...(InnerTypes2) == colnamesr.size());
+        using type_collection_l = typename type_list<Types...>::types;
+        using type_collection_r = typename type_list<Types2...>::types;
+        auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+        int llen = get_cur_rows();
+        int rlen = other.get_cur_rows();
+        std::multimap<T, size_t> valueTopos1;
+        std::multimap<T, size_t> valueTopos2;
+        // Must iterate twice to get the number of rows in result data frame
+        for (int i = 0; i < llen; i++)
+            valueTopos1.insert({get_c<T>(col_name, i), i});
+        for (int j = 0; j < rlen; j++) {
+            const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
+            if (valueTopos1.count(val))
+                valueTopos2.insert({val, j});
+        }
+        // get concated tuple type and names
+        auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+        std::vector<std::string> col_names;
+        for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+        for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+        // need to iterate through valueTopos2 to get common data
+        std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+        for (const auto& iter: valueTopos2) {
+            T key = iter.first;
+            size_t pos = iter.second;
+            std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+            auto tmp_range = valueTopos1.equal_range(key);
+            for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+                size_t l_pos = i->second;
+                std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
+                auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+                new_tuple_vec.push_back(combined_tuple);
+            }
+        }
+        return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+    }
     int get_cur_rows() const {
         return cur_rows;
     }
@@ -222,9 +299,6 @@ public:
         vals.erase(iter->second);
         col_names_map.erase(col_name);
     }
-    // auto get_tuple(size_t pos) {
-
-    // }
     template<typename T>
     std::vector<int> order(const std::string& col_name);
     template<typename T, typename F>
@@ -394,18 +468,7 @@ auto make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std:
         df->from_tuple(t[i], names, i);
     return df;
 }
-template<template<class...> class TypeLists, class... InnerTypes>
-auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
-    TypeLists<InnerTypes...>) {
-    using type_collection = typename type_list<InnerTypes...>::types;
-    assert(sizeof...(InnerTypes) == names.size());
-    int cur_rows = t.size();
-    auto df = new data_frame(cur_rows, type_collection{});
-    df->init_columns(t[0], names, cur_rows);
-    for (int i = 0; i < cur_rows; i++)
-        df->from_tuple(t[i], names, i);
-    return df;
-}
+
 template<typename T,
                     typename... Types1, 
                     typename... Types2, 
@@ -455,16 +518,6 @@ auto combine_inner(const data_frame<Types1...>& l, const data_frame<Types2...>& 
     }
     auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
     return new_df;
-}
-template<typename... Ts, typename... Types, std::size_t ... Is>
-auto for_each(const std::tuple<Ts...>& t, const data_frame<Types...>* df, 
-                const std::vector<std::string>& names, size_t pos, std::index_sequence<Is...>) {
-    return std::make_tuple(df->data_frame<Types...>::template get_c<Ts>(names[Is], pos)...);
-}
-template<typename... Types, typename... Ts>
-auto for_each_in_tuple(const std::tuple<Ts...>& t, const data_frame<Types...>* df, 
-                        const std::vector<std::string>& names, size_t pos) {
-    return for_each(t, df, names, pos, std::index_sequence_for<Ts...>{});
 }
 template<class... Types>
 class data_frame_view {

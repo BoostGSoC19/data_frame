@@ -167,6 +167,24 @@ TEST(Data_frame, merge_types) {
     std::get<long>(new_tuple);
     std::get<std::string>(new_tuple);
 }
+TEST(Data_frame, head_and_tail) {
+    using type_collection2 = type_list<std::string, int, double>::types;
+    data_frame df2 = type_collection2{};
+    df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+                                std::make_tuple(3.3, "hello"s, 10),
+                                std::make_tuple(2.2, "world"s, 40),
+                                std::make_tuple(2.2, "world"s, 40),  
+                                std::make_tuple(1.1, "bili"s, 50)}, 
+                                {"double_vec", "str_vec", "int_vec"});
+    auto df = df2.head(3);
+    EXPECT_EQ(df.get_cur_rows(), 3);
+    EXPECT_EQ(df.get_cur_cols(), 3);
+    df.print_with_index({0, 1, 2});
+    auto df3 = df2.tail(2);
+    EXPECT_EQ(df3.get_cur_rows(), 2);
+    EXPECT_EQ(df3.get_cur_cols(), 3);
+    df3.print_with_index({0, 1});
+}
 TEST(Data_frame, combine_data_frames) {
     using type_collection1 = type_list<double, long>::types;
     using type_collection2 = type_list<std::string, int, double>::types;
@@ -187,4 +205,16 @@ TEST(Data_frame, combine_data_frames) {
     EXPECT_EQ(df3->get_cur_rows(), 4);
     EXPECT_EQ(df3->get_cur_cols(), 4);
     df3->print_with_index({0, 1, 2, 3});
+    auto df4 = df1.combine_inner<double>(df2, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df4.get_cur_rows(), 4);
+    EXPECT_EQ(df4.get_cur_cols(), 4);
+    df4.print_with_index({0, 1, 2, 3});
+    auto df5 = df2.combine_inner<double>(df1, "double_vec", 
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"}, 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"});
+    EXPECT_EQ(df5.get_cur_rows(), 4);
+    EXPECT_EQ(df5.get_cur_cols(), 4);
+    df5.print_with_index({0, 1, 2, 3});
 }
