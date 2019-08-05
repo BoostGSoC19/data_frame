@@ -19,6 +19,11 @@ auto merge_types(TypeLists1<Types1...> l, TypeLists2<Types2...> r) {
     using types = boost::mp11::mp_unique<decltype(new_tuple)>;
     return types{};
 }
+/**
+ * data_frame_col represents each column within one data_frame, and it's designed as a heterogenous container. 
+ * One data_frrame_col instance can store different types, but it's only used to store a single type. 
+ * Users can extract its content by using visitor pattern. 
+ */
 class data_frame_col {
 public:
     template<typename T>

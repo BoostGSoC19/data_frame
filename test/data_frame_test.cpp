@@ -217,4 +217,63 @@ TEST(Data_frame, combine_data_frames) {
     EXPECT_EQ(df5.get_cur_rows(), 4);
     EXPECT_EQ(df5.get_cur_cols(), 4);
     df5.print_with_index({0, 1, 2, 3});
+    // left join
+    auto df6 = combine_left<double>(df2, df1, "double_vec", 
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"}, 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"});
+    EXPECT_EQ(df6->get_cur_rows(), 5);
+    EXPECT_EQ(df6->get_cur_cols(), 4);
+    df6->print_with_index({0, 1, 2, 3, 4});   
+    // right join
+    auto df7 = combine_right<double>(df1, df2, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df7->get_cur_rows(), 5);
+    EXPECT_EQ(df7->get_cur_cols(), 4);
+    df7->print_with_index({0, 1, 2, 3, 4});   
+    data_frame df8 = type_collection1{};
+    data_frame df9 = type_collection2{};
+    df8.from_tuples(std::vector{std::make_tuple(3.3, 10L), 
+                                std::make_tuple(2.2, 40L),  
+                                std::make_tuple(5.7, 70L)}, 
+                                {"double_vec", "long_vec"});
+    df9.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+                                std::make_tuple(3.3, "hello"s, 10),
+                                std::make_tuple(2.2, "world"s, 40),
+                                std::make_tuple(2.2, "world"s, 40),  
+                                std::make_tuple(1.1, "bili"s, 50)}, 
+                                {"double_vec", "str_vec", "int_vec"});
+    auto df10 = combine_full<double>(df8, df9, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df10->get_cur_rows(), 6);
+    EXPECT_EQ(df10->get_cur_cols(), 4);
+    df10->print_with_index({0, 1, 2, 3, 4, 5});   
+}
+TEST(Data_frame, set_operations) {
+    using type_collection2 = type_list<std::string, int, double>::types;
+    data_frame df1 = type_collection2{};
+    df1.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+                                std::make_tuple(2.2, "world"s, 40),
+                                std::make_tuple(7.2, "test"s, 70)}, 
+                                {"double_vec", "str_vec", "int_vec"});
+    data_frame df2 = type_collection2{};
+    df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+                                std::make_tuple(3.3, "hello"s, 10),
+                                std::make_tuple(2.2, "world"s, 40),
+                                std::make_tuple(2.2, "world"s, 40),  
+                                std::make_tuple(1.1, "bili"s, 50)}, 
+                                {"double_vec", "str_vec", "int_vec"});
+    auto df3 = intersect(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df3->get_cur_rows(), 2);
+    EXPECT_EQ(df3->get_cur_cols(), 3);
+    df3->print_with_index({0, 1});
+    auto df4 = setdiff(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df4->get_cur_rows(), 2);
+    EXPECT_EQ(df4->get_cur_cols(), 3);
+    df4->print_with_index({0, 1});
+    auto df5 = setunion(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df5->get_cur_rows(), 4);
+    EXPECT_EQ(df5->get_cur_cols(), 3);
+    df5->print_with_index({0, 1, 2, 3});
 }

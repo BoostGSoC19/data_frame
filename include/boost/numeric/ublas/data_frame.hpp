@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include <set>
 #include <vector>
 #include <initializer_list>
 #include <tuple>
@@ -519,6 +520,236 @@ auto combine_inner(const data_frame<Types1...>& l, const data_frame<Types2...>& 
     auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
     return new_df;
 }
+template<typename T,
+                    typename... Types1, 
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto combine_left(const data_frame<Types1...>& l, const data_frame<Types2...>& r, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types1> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types1...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({l.data_frame<Types1...>::template get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = r.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes2...>{}, &r, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes1...>{}, &l, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining left rows which doesn't include in the right `data_frame`
+    for (const auto& iter: valueTopos1) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        if (!valueTopos2.count(key)) {
+            std::tuple<InnerTypes2...> right_tuple = {};
+            std::get<T>(right_tuple) = key;
+            std::tuple<InnerTypes1...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes1...>{}, &l, colnamesl, pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+    return new_df;
+}
+template<typename T,
+                    typename... Types1, 
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto combine_right(const data_frame<Types1...>& l, const data_frame<Types2...>& r, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    return combine_left<T>(r, l, col_name, TypeLists2<InnerTypes2...>{}, colnamesr, TypeLists1<InnerTypes1...>{}, colnamesl);
+}
+template<typename T,
+                    typename... Types1, 
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto combine_full(const data_frame<Types1...>& l, const data_frame<Types2...>& r, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types1> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types1...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    std::multimap<T, size_t> valsNotInLeft;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({l.data_frame<Types1...>::template get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = r.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+        else {
+            valsNotInLeft.insert({val, j});
+        }
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes2...>{}, &r, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes1...>{}, &l, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining left rows which doesn't include in the right `data_frame`
+    for (const auto& iter: valueTopos1) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        if (!valueTopos2.count(key)) {
+            std::tuple<InnerTypes2...> right_tuple = {};
+            std::get<T>(right_tuple) = key;
+            std::tuple<InnerTypes1...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes1...>{}, &l, colnamesl, pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining right rows which doesn't include in the left `data_frame`
+    for (const auto& iter: valsNotInLeft) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes1...> left_tuple = {};
+        std::get<T>(left_tuple) = key;
+        std::tuple<InnerTypes2...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes2...>{}, &r, colnamesr, pos);
+        auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+        new_tuple_vec.push_back(combined_tuple);
+    }
+    auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+    return new_df;
+}
+template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
+auto intersect(const data_frame<Types...>& l, const data_frame<Types...>& r, 
+    TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
+    std::vector<std::string> col_names;
+    for (const auto& name: colnames) col_names.push_back(name);
+    std::set<std::tuple<InnerTypes...>> left_tuples_set;
+    std::set<std::tuple<InnerTypes...>> right_tuples_set;
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
+    for (int i = 0; i < llen; i++) {
+        std::tuple<InnerTypes...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &l, colnames, i);
+        left_tuples_set.insert(left_tuple);
+    }
+    for (int i = 0; i < rlen; i++) {
+        std::tuple<InnerTypes...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &r, colnames, i);
+        right_tuples_set.insert(right_tuple);       
+    }
+    std::vector<std::tuple<InnerTypes...>> interset_tuples;
+    for (const auto& iter: left_tuples_set) {
+        if (right_tuples_set.count(iter)) {
+            interset_tuples.push_back(iter);
+        }
+    }
+    return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
+}
+template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
+auto setdiff(const data_frame<Types...>& l, const data_frame<Types...>& r, 
+    TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
+    std::vector<std::string> col_names;
+    for (const auto& name: colnames) col_names.push_back(name);
+    std::set<std::tuple<InnerTypes...>> left_tuples_set;
+    std::set<std::tuple<InnerTypes...>> right_tuples_set;
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
+    for (int i = 0; i < llen; i++) {
+        std::tuple<InnerTypes...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &l, colnames, i);
+        left_tuples_set.insert(left_tuple);
+    }
+    for (int i = 0; i < rlen; i++) {
+        std::tuple<InnerTypes...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &r, colnames, i);
+        right_tuples_set.insert(right_tuple);       
+    }
+    std::vector<std::tuple<InnerTypes...>> interset_tuples;
+    for (const auto& iter: left_tuples_set) {
+        if (!right_tuples_set.count(iter)) {
+            interset_tuples.push_back(iter);
+        }
+    }
+    for (const auto& iter: right_tuples_set) {
+        if (!left_tuples_set.count(iter)) {
+            interset_tuples.push_back(iter);
+        }
+    }
+    return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
+}
+template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
+auto setunion(const data_frame<Types...>& l, const data_frame<Types...>& r, 
+    TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
+    std::vector<std::string> col_names;
+    for (const auto& name: colnames) col_names.push_back(name);
+    std::set<std::tuple<InnerTypes...>> left_tuples_set;
+    std::set<std::tuple<InnerTypes...>> right_tuples_set;
+    std::set<std::tuple<InnerTypes...>> complete_tuples_set;
+    int llen = l.get_cur_rows();
+    int rlen = r.get_cur_rows();
+    for (int i = 0; i < llen; i++) {
+        std::tuple<InnerTypes...> left_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &l, colnames, i);
+        left_tuples_set.insert(left_tuple);
+        complete_tuples_set.insert(left_tuple);
+    }
+    for (int i = 0; i < rlen; i++) {
+        std::tuple<InnerTypes...> right_tuple = for_each_in_tuple(std::tuple<InnerTypes...>{}, &r, colnames, i);
+        right_tuples_set.insert(right_tuple);      
+        complete_tuples_set.insert(right_tuple); 
+    }
+    std::vector<std::tuple<InnerTypes...>> interset_tuples(complete_tuples_set.begin(), complete_tuples_set.end());
+    return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
+}
+/**
+ * `data_frame_view` only contains the column index to the underlying `data_frame`
+ */
 template<class... Types>
 class data_frame_view {
 public:
