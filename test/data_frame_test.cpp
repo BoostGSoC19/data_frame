@@ -223,7 +223,7 @@ TEST(Data_frame, combine_data_frames) {
                                     std::tuple<double, long>{}, {"double_vec", "long_vec"});
     EXPECT_EQ(df6->get_cur_rows(), 5);
     EXPECT_EQ(df6->get_cur_cols(), 4);
-    df6->print_with_index({0, 1, 2, 3, 4});   
+    df6->print_with_index({0, 1, 2, 3, 4});  
     // right join
     auto df7 = combine_right<double>(df1, df2, "double_vec", 
                                     std::tuple<double, long>{}, {"double_vec", "long_vec"},
@@ -248,7 +248,25 @@ TEST(Data_frame, combine_data_frames) {
                                     std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
     EXPECT_EQ(df10->get_cur_rows(), 6);
     EXPECT_EQ(df10->get_cur_cols(), 4);
-    df10->print_with_index({0, 1, 2, 3, 4, 5});   
+    df10->print_with_index({0, 1, 2, 3, 4, 5});
+    auto df11 = df2.combine_left<double>(df1, "double_vec", 
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"}, 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"});
+    EXPECT_EQ(df11.get_cur_rows(), 5);
+    EXPECT_EQ(df11.get_cur_cols(), 4);
+    df11.print_with_index({0, 1, 2, 3, 4});
+    auto df12 = df1.combine_right<double>(df2, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df11.get_cur_rows(), 5);
+    EXPECT_EQ(df11.get_cur_cols(), 4);
+    df11.print_with_index({0, 1, 2, 3, 4});    
+    auto df13 = df8.combine_full<double>(df9, "double_vec", 
+                                    std::tuple<double, long>{}, {"double_vec", "long_vec"},
+                                    std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+    EXPECT_EQ(df13.get_cur_rows(), 6);
+    EXPECT_EQ(df13.get_cur_cols(), 4);
+    df13.print_with_index({0, 1, 2, 3, 4, 5});    
 }
 TEST(Data_frame, set_operations) {
     using type_collection2 = type_list<std::string, int, double>::types;

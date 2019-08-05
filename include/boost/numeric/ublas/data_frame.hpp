@@ -194,6 +194,7 @@ public:
             });
             std::cout << '\n';
         }
+        std::cout << std::endl;
     }
     void print_with_range(const range& index) {
         int len = index.size();
@@ -222,47 +223,31 @@ public:
     auto combine_inner(const data_frame<Types2...>& other, 
         const std::string& col_name, 
         TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
-        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
-        static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
-        static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
-        assert(sizeof...(InnerTypes1) == colnamesl.size());
-        assert(sizeof...(InnerTypes2) == colnamesr.size());
-        using type_collection_l = typename type_list<Types...>::types;
-        using type_collection_r = typename type_list<Types2...>::types;
-        auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
-        int llen = get_cur_rows();
-        int rlen = other.get_cur_rows();
-        std::multimap<T, size_t> valueTopos1;
-        std::multimap<T, size_t> valueTopos2;
-        // Must iterate twice to get the number of rows in result data frame
-        for (int i = 0; i < llen; i++)
-            valueTopos1.insert({get_c<T>(col_name, i), i});
-        for (int j = 0; j < rlen; j++) {
-            const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
-            if (valueTopos1.count(val))
-                valueTopos2.insert({val, j});
-        }
-        // get concated tuple type and names
-        auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
-        std::vector<std::string> col_names;
-        for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
-        for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
-        // need to iterate through valueTopos2 to get common data
-        std::vector<decltype(tuple_cat_val)> new_tuple_vec;
-        for (const auto& iter: valueTopos2) {
-            T key = iter.first;
-            size_t pos = iter.second;
-            std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
-            auto tmp_range = valueTopos1.equal_range(key);
-            for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
-                size_t l_pos = i->second;
-                std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
-                auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
-                new_tuple_vec.push_back(combined_tuple);
-            }
-        }
-        return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
-    }
+        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    template<typename T,
+                        typename... Types2, 
+                        template<class...> class TypeLists1, typename... InnerTypes1, 
+                        template<class...> class TypeLists2, typename... InnerTypes2>
+    auto combine_left(const data_frame<Types2...>& other, 
+        const std::string& col_name, 
+        TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    template<typename T,
+                        typename... Types2, 
+                        template<class...> class TypeLists1, typename... InnerTypes1, 
+                        template<class...> class TypeLists2, typename... InnerTypes2>
+    auto combine_right(const data_frame<Types2...>& other, 
+        const std::string& col_name, 
+        TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    template<typename T,
+                        typename... Types2, 
+                        template<class...> class TypeLists1, typename... InnerTypes1, 
+                        template<class...> class TypeLists2, typename... InnerTypes2>
+    auto combine_full(const data_frame<Types2...>& other, 
+        const std::string& col_name, 
+        TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+        TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
     int get_cur_rows() const {
         return cur_rows;
     }
@@ -456,6 +441,253 @@ const T& data_frame<Types...>::get_c(const std::string& col_name, size_t pos) co
     auto& container = *(iter->second);
     auto& tmp_vector = container.data_frame_col::template get_vector<T>();
     return tmp_vector[pos];
+}
+template<class... Types>
+template<typename T,
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto data_frame<Types...>::combine_inner(const data_frame<Types2...>& other, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = get_cur_rows();
+    int rlen = other.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+}
+template<class... Types>
+template<typename T,
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto data_frame<Types...>::combine_left(const data_frame<Types2...>& other, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = get_cur_rows();
+    int rlen = other.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    for (const auto& iter: valueTopos1) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        if (!valueTopos2.count(key)) {
+            std::tuple<InnerTypes2...> right_tuple = {};
+            std::get<T>(right_tuple) = key;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+}
+template<class... Types>
+template<typename T,
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto data_frame<Types...>::combine_right(const data_frame<Types2...>& other, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = get_cur_rows();
+    int rlen = other.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    std::multimap<T, size_t> valsNotInLeft;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+        else {
+            valsNotInLeft.insert({val, j});
+        }
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining right rows which doesn't include in the left `data_frame`
+    for (const auto& iter: valsNotInLeft) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes1...> left_tuple = {};
+        std::get<T>(left_tuple) = key;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+        new_tuple_vec.push_back(combined_tuple);
+    }
+    return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
+}
+template<class... Types>
+template<typename T,
+                    typename... Types2, 
+                    template<class...> class TypeLists1, typename... InnerTypes1, 
+                    template<class...> class TypeLists2, typename... InnerTypes2>
+auto data_frame<Types...>::combine_full(const data_frame<Types2...>& other, 
+    const std::string& col_name, 
+    TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
+    TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
+    static_assert(((std::is_same_v<T, Types> || ...)), "T type doesn't belong to common types");
+    static_assert(((std::is_same_v<T, Types2> || ...)), "T type doesn't belong to common types");
+    assert(sizeof...(InnerTypes1) == colnamesl.size());
+    assert(sizeof...(InnerTypes2) == colnamesr.size());
+    using type_collection_l = typename type_list<Types...>::types;
+    using type_collection_r = typename type_list<Types2...>::types;
+    auto merge_type_collection = merge_types(type_collection_l{}, type_collection_r{});
+    int llen = get_cur_rows();
+    int rlen = other.get_cur_rows();
+    std::multimap<T, size_t> valueTopos1;
+    std::multimap<T, size_t> valueTopos2;
+    std::multimap<T, size_t> valsNotInLeft;
+    // Must iterate twice to get the number of rows in result data frame
+    for (int i = 0; i < llen; i++)
+        valueTopos1.insert({get_c<T>(col_name, i), i});
+    for (int j = 0; j < rlen; j++) {
+        const T& val = other.data_frame<Types2...>::template get_c<T>(col_name, j);
+        if (valueTopos1.count(val))
+            valueTopos2.insert({val, j});
+        else {
+            valsNotInLeft.insert({val, j});
+        }
+    }
+    // get concated tuple type and names
+    auto tuple_cat_val = std::tuple_cat(std::tuple<InnerTypes1...>{}, std::tuple<InnerTypes2...>{});
+    std::vector<std::string> col_names;
+    for (const auto& l_name: colnamesl) { col_names.push_back(l_name); }
+    for (const auto& r_name: colnamesr) { col_names.push_back(r_name); }
+    // need to iterate through valueTopos2 to get common data
+    std::vector<decltype(tuple_cat_val)> new_tuple_vec;
+    for (const auto& iter: valueTopos2) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto tmp_range = valueTopos1.equal_range(key);
+        for (auto i = tmp_range.first; i != tmp_range.second; ++i) {
+            size_t l_pos = i->second;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, l_pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining left rows which doesn't include in the right `data_frame`
+    for (const auto& iter: valueTopos1) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        if (!valueTopos2.count(key)) {
+            std::tuple<InnerTypes2...> right_tuple = {};
+            std::get<T>(right_tuple) = key;
+            std::tuple<InnerTypes1...> left_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes1...>{}, this, colnamesl, pos);
+            auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+            new_tuple_vec.push_back(combined_tuple);
+        }
+    }
+    // adding remaining right rows which doesn't include in the left `data_frame`
+    for (const auto& iter: valsNotInLeft) {
+        T key = iter.first;
+        size_t pos = iter.second;
+        std::tuple<InnerTypes1...> left_tuple = {};
+        std::get<T>(left_tuple) = key;
+        std::tuple<InnerTypes2...> right_tuple = boost::numeric::ublas::for_each_in_tuple(std::tuple<InnerTypes2...>{}, &other, colnamesr, pos);
+        auto combined_tuple = std::tuple_cat(left_tuple, right_tuple);
+        new_tuple_vec.push_back(combined_tuple);
+    }
+    return *boost::numeric::ublas::make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
 }
 // A non-deduced context from tuple inside vector to make_from_tuples, have to provide additional parameter
 template<template<class...> class TypeLists, class... InnerTypes>
