@@ -125,6 +125,14 @@ public:
     */
     template<template<class...> class TypeLists, class... InnerTypes>
     data_frame(size_t rows, TypeLists<InnerTypes...>): cur_rows(rows) { }
+    /** @brief Add one column with col_name as name, tmp_vec as column data
+    *
+    * @tparam T T must be one of the Types... 
+    * 
+    * @param col_name column name for new column
+    * 
+    * @param tmp_vec data for new column
+    */   
     template<typename T> 
     void add_column(std::string col_name, std::vector<T> tmp_vec) {
         static_assert(((std::is_same_v<T, Types> || ...)), "New column doesn't match any of the data_frame types!");
@@ -136,51 +144,145 @@ public:
         col_names_map.insert({col_name, iter});
         type_map.insert({col_name, typeid(T).name()});
     }
-    template<class... Args>
-    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names);
-    template<class... Args>
-    void from_tuples(std::initializer_list<std::tuple<Args...>> t, const std::vector<std::string>& names);
-    template<template<class...> class TypeLists, class... Args>
-    void from_tuples(const std::vector<std::tuple<Args...>>& t, const std::vector<std::string>& names, TypeLists<Args...>);
+    /** @brief add tuples with colname @code names @endcode
+    *
+    * @tparam InnerTypes... The type for tuple, each InnerTypes must be one of Types... 
+    * 
+    * @param t vector of tuples, the size will become data_frame row size
+    * 
+    * @param names column name for each tuple type, maintains a mapping for tuple type to column name
+    */       
+    template<class... InnerTypes>
+    void from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names);
+    /** @brief add tuples with colname @code names @endcode
+    *
+    * @tparam InnerTypes... The type for tuple, each InnerTypes must be one of Types... 
+    * 
+    * @param t initializer_list of tuples, the size will become data_frame row size
+    * 
+    * @param names column name for each tuple type, maintains a mapping for tuple type to column name
+    */      
+    template<class... InnerTypes>
+    void from_tuples(std::initializer_list<std::tuple<InnerTypes...>> t, const std::vector<std::string>& names);
+    /** @brief add tuples with colname @code names @endcode
+    *
+    * @tparam TypeLists container for InnerTypes... 
+    * 
+    * @tparam InnerTypes... The type for tuple, each InnerTypes must be one of Types... 
+    * 
+    * @param t vector of tuples, the size will become data_frame row size
+    * 
+    * @param names column name for each tuple type, maintains a mapping for tuple type to column name
+    * 
+    * @param TypeLists<Args...> used for type deduction
+    */   
+    template<template<class...> class TypeLists, class... InnerTypes>
+    void from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, TypeLists<Args...>);
+    /** @brief return data with at pos row in col_name position
+    *
+    * @tparam T the type for col_name column 
+    *  
+    * @param pos row position
+    */   
     template<typename T>
     T& get(const std::string& col_name, size_t pos);
+    /** @brief return const data with at pos row in col_name position
+    *
+    * @tparam T the type for col_name column 
+    *  
+    * @param pos row position
+    */   
     template<typename T>
     const T& get_c(const std::string& col_name, size_t pos) const;
+    /** @brief create a view only contains first n lines
+    * 
+    * @param n first n lines
+    */   
     data_frame_view<Types...> head(size_t n) {
         assert(n < cur_rows);
         return create_view_with_range(range(0, n));
     }
+   /** @brief create a view only contains last n lines
+    * 
+    * @param n last n lines
+    */   
     data_frame_view<Types...> tail(size_t n) {
         assert(n < cur_rows);
         return create_view_with_range(range(cur_rows - n, cur_rows));
     }
+    /** @brief create a view with rows only satisfying a condition 
+    * 
+    * @tparam Col_type the column type to be filtered
+    * 
+    * @tparam F a functor for condition
+    * 
+    * @param col_name the column name applying the condition
+    * 
+    * @param f a functor for condition
+    */   
     template<typename Col_type, typename F>
     data_frame_view<Types...> select(const std::string& col_name, F f) {
         const std::vector<int>& new_order = filter<Col_type>(col_name, f);
         return create_view_with_index(std::move(new_order));
     }
+    /** @brief create a view with new row orders after sort
+    * 
+    * @tparam Col_type the column type to be filtered
+    * 
+    * @param col_name the column name applying the condition
+    */   
     template<typename Col_type>
     data_frame_view<Types...> sort(const std::string& col_name) {
         const std::vector<int>& new_order = order<Col_type>(col_name);
         return create_view_with_index(std::move(new_order));
     }
+    /** @brief create a view with new row orders after sort
+    * 
+    * @tparam Col_type the column type to be filtered
+    * 
+    * @tparam F a functor for condition
+    * 
+    * @param col_name the column name applying the condition
+    * 
+    * @param f a functor for condition
+    */   
     template<typename Col_type, typename F>
     data_frame_view<Types...> sort(const std::string& col_name, F f) {
         const std::vector<int>& new_order = order<Col_type>(col_name, f);
         return create_view_with_index(std::move(new_order));
     }
+    /** @brief create a view with current data_frame
+    * 
+    * @param index the index number to create data_frame_view
+    */   
     data_frame_view<Types...> create_view_with_index(std::vector<int>&& index) {
         return data_frame_view(this, std::move(index), typename type_list<Types...>::types{});
     }
+    /** @brief create a view with current data_frame
+    * 
+    * @param index the index number to create data_frame_view
+    */   
     data_frame_view<Types...> create_view_with_index(const std::vector<int>& index) {
         return data_frame_view(this, index, typename type_list<Types...>::types{});
     }
+    /** @brief create a view with current data_frame
+    * 
+    * @param r the index range to create data_frame_view
+    */   
     data_frame_view<Types...> create_view_with_range(const range& r) {
         return data_frame_view(this, r, typename type_list<Types...>::types{});
     }
+    /** @brief create a view with current data_frame
+    * 
+    * @param s the index slice to create data_frame_view
+    */   
     data_frame_view<Types...> create_view_with_slice(const slice& s) {
         return data_frame_view(this, s, typename type_list<Types...>::types{});
     }
+   /** @brief copy a new data_frame with existing data
+    * 
+    * @param index the index copy from current data_frame
+    */   
     data_frame<Types...> copy_with_index(const std::vector<int>& index) {
         int len = index.size();
         data_frame<Types...> new_df;
@@ -200,6 +302,10 @@ public:
         }
         return new_df;
     }
+    /** @brief copy a new data_frame with existing data
+    * 
+    * @param index the range copy from current data_frame
+    */   
     data_frame<Types...> copy_with_range(const range& r) {
         int len = r.size();
         data_frame<Types...> new_df;
@@ -219,6 +325,10 @@ public:
         }
         return new_df;
     }
+    /** @brief copy a new data_frame with existing data
+    * 
+    * @param index the slice copy from current data_frame
+    */   
     data_frame<Types...> copy_with_slice(const slice& s) {
         int len = s.size();
         data_frame<Types...> new_df;
@@ -238,6 +348,14 @@ public:
         }
         return new_df;
     }
+   /** @brief change existing value for specific indexes
+    * 
+    * @tparam F the functor type for applying
+    * 
+    * @param index the index for using the applying the computation
+    * 
+    * @param f the functor to compute new value
+    */   
     template<typename F>
     void apply_with_index(const std::vector<int>& index, F f) {
         int len = index.size();
@@ -247,6 +365,10 @@ public:
             });
         }
     }
+   /** @brief print for specific indexes
+    * 
+    * @param index the index for printing
+    */   
     void print_with_index(const std::vector<int>& index) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
@@ -258,6 +380,10 @@ public:
         }
         std::cout << std::endl;
     }
+   /** @brief print for specific indexes
+    * 
+    * @param index the range for printing
+    */   
     void print_with_range(const range& index) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
@@ -268,6 +394,10 @@ public:
             std::cout << '\n';
         }
     }
+   /** @brief print for specific indexes
+    * 
+    * @param index the slice for printing
+    */   
     void print_with_slice(const slice& index) {
         int len = index.size();
         for (int i = 0; i < len; i++) {
@@ -310,35 +440,65 @@ public:
         const std::string& col_name, 
         TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
         TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    /** @brief get current row number 
+    */     
     int get_cur_rows() const {
         return cur_rows;
     }
+    /** @brief get current column number 
+    */  
     int get_cur_cols() const {
         return col_names_map.size();
     }
+    /** @brief get current column names 
+    */  
     std::vector<std::string> get_col_names() const {
         std::vector<std::string> ans;
         for (const auto& p: type_map)
             ans.push_back(p.first);
         return ans;
     }
-    template<class... Args>
-    void init_columns(const std::tuple<Args...>& t, const std::vector<std::string>& names, int size) {
+    /** @brief initialize values for @code data_frame @endcode
+    *  
+    * @tparam InnerTypes... a typelists containing concrete types
+    * 
+    * @param t vector of tuples
+    * 
+    * @param names the corresponding names for each tuple component
+    * 
+    * @param size row number
+    */
+    template<class... InnerTypes>
+    void init_columns(const std::tuple<InnerTypes...>& t, const std::vector<std::string>& names, int size) {
         for_each_in_tuple(t, [this, size](auto t, const std::string& cur_name) {
             this->init_column<decltype(t)>(cur_name, size);
         }, names);
     }
+    /** @brief initialize specific column for @code data_frame @endcode
+    *  
+    * @tparam T a type for current column
+    * 
+    * @param col_name the column name to be initialized
+    * 
+    * @param size row number
+    */
     template<typename T>
     bool init_column(const std::string& col_name, int size);
-    template<class... Args>
-    void from_tuple(const std::tuple<Args...>& t, const std::vector<std::string>& names, int row) {
-        for_each_in_tuple(t, [this, row](auto t, std::string name){
+    template<class... InnerTypes>
+    void from_tuple(const std::tuple<InnerTypes...>& t, const std::vector<std::string>& names, int size) {
+        for_each_in_tuple(t, [this, size](auto t, std::string name){
             auto iter = this->col_names_map.find(name);
             if (iter == this->col_names_map.end()) return;
             auto& container = *(iter->second);
-            container.data_frame_col::template at<decltype(t)>(row) = t;   
+            container.data_frame_col::template at<decltype(t)>(size) = t;   
         }, names);
     }
+    /** @brief delete specific column 
+    *  
+    * @tparam T a type for current column
+    * 
+    * @param col_name the column name to be deleted
+    */
     template<typename T>
     void remove_col(const std::string& col_name) {
         type_map.erase(col_name);
@@ -347,8 +507,24 @@ public:
         vals.erase(iter->second);
         col_names_map.erase(col_name);
     }
+    /** @brief return a new index order after sorting for column with name col_name
+    *  
+    * @tparam T a type for current column
+    * 
+    * @param col_name the column name to be sorted
+    */
     template<typename T>
     std::vector<int> order(const std::string& col_name);
+    /** @brief return a new index order after sorting for column with name col_name
+    *  
+    * @tparam F a user defined functor type
+    * 
+    * @tparam T a type for current column
+    * 
+    * @param col_name the column name to be sorted
+    * 
+    * @param f a user defined funtor to sort on specific column
+    */
     template<typename T, typename F>
     std::vector<int> order(const std::string& col_name, F f);
 private:
