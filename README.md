@@ -24,8 +24,8 @@ auto* df2 = make_from_tuples({  {0, 3.4, "hello"s},
                                 std::tuple<int, double, std::string>{});
 ```
 For `data_frame`, it can support multiple relational operations or set operations. The return value is a view of original `data_frame`. `data_frame_view` only contains column index and any operation on `data_frame_view` will return another `data_frame_view`. You can chain different operations on the same `data_frame_view`. 
+select 
 ```
-// select 
 using type_collection = type_list<double, long>::types;
 data_frame df = type_collection{};
 df.from_tuples(std::vector{std::make_tuple(3.3, 10L), 
@@ -38,7 +38,9 @@ auto cur_view = df.select<long>("long_vec", [](long curVal) {
                     .apply_with_index({0, 1, 2}, [](auto& t) {
                         return t * 2;
                     });
-// join
+```
+join
+```
 using type_collection1 = type_list<double, long>::types;
 using type_collection2 = type_list<std::string, int, double>::types;
 data_frame df1 = type_collection1{};
@@ -55,19 +57,21 @@ df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10),
 auto df3 = combine_inner<double>(df1, df2, "double_vec", 
                                 std::tuple<double, long>{}, {"double_vec", "long_vec"},
                                 std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
-// set operation to get common rows for df4 and df5
-using type_collection3 = type_list<std::string, int, double>::types;
-data_frame df4 = type_collection2{};
+```
+set operation to get common rows for df4 and df5
+```
+using type_collection = type_list<std::string, int, double>::types;
+data_frame df1 = type_collection{};
 df1.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
                             std::make_tuple(2.2, "world"s, 40),
                             std::make_tuple(7.2, "test"s, 70)}, 
                             {"double_vec", "str_vec", "int_vec"});
-data_frame df5 = type_collection2{};
-df5.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
+data_frame df2 = type_collection{};
+df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10), 
                             std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(2.2, "world"s, 40),
                             std::make_tuple(2.2, "world"s, 40),  
                             std::make_tuple(1.1, "github"s, 50)}, 
                             {"double_vec", "str_vec", "int_vec"});
-auto df6 = intersect(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+auto df3 = intersect(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
 ```
