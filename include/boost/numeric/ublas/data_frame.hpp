@@ -17,6 +17,22 @@
 namespace boost { namespace numeric { namespace ublas {	
 template<class... Types>
 class data_frame;
+/** @brief @code data_frame_type_builder @endcode is used to provide a more convenient type declaration 
+ * @code 
+ * using type_collection = type_list<int, double, std::string>::original_types; 
+ * data_frame_type_builder type_builder = {type_collection{}};
+ * using data_frame_type = decltype(type_builder)::data_frame_type;
+ * data_frame_type* df3 = make_from_tuples({ {1, 3.3, "hello"s}, 
+ *                                           {2, 2.2, "world"s}, 
+ *                                           {3, 1.1, "github"s}   }, 
+ *                                           {"int_vec", "double_vec", "str_vec"}, 
+ *                                           type_collection{});
+ * @endcode
+ * 
+ * @tparam TypeLists a set of potential types, used as @code TypeLists<Types...> @endcode
+ * 
+ * @tparam Types... a typelists containing concrete types in @code TypeLists<Types...> @endcode
+ */
 template<typename... Types>
 struct data_frame_type_builder {
     template<template<class...> class TypeLists, class... InnerTypes>
@@ -30,11 +46,37 @@ auto for_each(const std::tuple<Ts...>& t, const data_frame<Types...>* df,
                 const std::vector<std::string>& names, size_t pos, std::index_sequence<Is...>) {
     return std::make_tuple(df->data_frame<Types...>::template get_c<Ts>(names[Is], pos)...);
 }
+/** @brief used to iterate each value in @code std::tuple @endcode 
+ * 
+ * @tparam Ts...  types
+ * 
+ * @tparam Types... a typelists containing concrete types in @code TypeLists<Types...> @endcode
+ * 
+ * @param t one tuple used for deduct types
+ * 
+ * @param df the @code data_frame @endcode operating on
+ * 
+ * @param names the corresponding column name for each type in Types...
+ * 
+ * @param pos the row index for df
+ */
 template<typename... Types, typename... Ts>
 auto for_each_in_tuple(const std::tuple<Ts...>& t, const data_frame<Types...>* df, 
                         const std::vector<std::string>& names, size_t pos) {
     return for_each(t, df, names, pos, std::index_sequence_for<Ts...>{});
 }
+/** @brief create a new @code data_frame @endcode from a vector of tuples
+ * 
+ * @tparam TypeLists... a container for types
+ * 
+ * @tparam InnerTypes... a typelists containing concrete types in @code TypeLists<Types...> @endcode
+ * 
+ * @param t a vector of tuples with InnerTypes...
+ * 
+ * @param names the corresponding column name for each type in InnerTypes...
+ * 
+ * @param TypeLists<InnerTypes...> used for type deduction
+ */
 template<template<class...> class TypeLists, class... InnerTypes>
 auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, 
     TypeLists<InnerTypes...>) {
@@ -50,6 +92,11 @@ auto make_from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std
 template<class... Types>
 class data_frame_view;
 
+/** @brief data_frame represents a collection of data_frame_col, and it's designed as a heterogenous container. 
+ * each data_frame_col can represent only one type 
+ * 
+ * @tparam Types... represent a non-repeated types from all data_frame_col
+ */
 template<class... Types>
 class data_frame {
 public:
@@ -57,10 +104,25 @@ public:
     using store_t = std::list<data_frame_col>;
     using name_map_t = std::unordered_map<std::string, typename std::list<data_frame_col>::iterator>;
     using type_map_t = std::unordered_map<std::string, std::string>;
-    // InnerTypes must be unique
+    /** @brief Build an empty data_frame
+     *
+     * @note current column is empty
+     */
     data_frame(): cur_rows(-1) { }
+    /** @brief Build an empty data_frame
+    *
+    * @tparam TypeLists a set of potential types, used as @code TypeLists<InnerTypes...> @endcode
+    * 
+    * @tparam InnerTypes... a typelists containing concrete types in @code TypeLists<InnerTypes...> @endcode
+    */
     template<template<class...> class TypeLists, class... InnerTypes>
     data_frame(TypeLists<InnerTypes...>): cur_rows(-1) { }
+    /** @brief Build an empty data_frame
+    *
+    * @tparam TypeLists a set of potential types, used as @code TypeLists<InnerTypes...> @endcode
+    * 
+    * @tparam InnerTypes... a typelists containing concrete types in @code TypeLists<InnerTypes...> @endcode
+    */
     template<template<class...> class TypeLists, class... InnerTypes>
     data_frame(size_t rows, TypeLists<InnerTypes...>): cur_rows(rows) { }
     template<typename T> 
