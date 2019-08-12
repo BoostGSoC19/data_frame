@@ -177,7 +177,7 @@ public:
     * @param TypeLists<Args...> used for type deduction
     */   
     template<template<class...> class TypeLists, class... InnerTypes>
-    void from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, TypeLists<Args...>);
+    void from_tuples(const std::vector<std::tuple<InnerTypes...>>& t, const std::vector<std::string>& names, TypeLists<InnerTypes...>);
     /** @brief return data with at pos row in col_name position
     *
     * @tparam T the type for col_name column 

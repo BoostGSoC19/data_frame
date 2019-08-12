@@ -1,0 +1,8 @@
+FILE(GLOB TEST_TARGETS "*example.cpp")
+foreach(testsourcefile ${TEST_TARGETS})
+    get_filename_component(testname ${testsourcefile} NAME)
+    string( REPLACE ".cpp" "" testname ${testname} )
+    add_executable(${testname} ${testsourcefile})
+    target_link_libraries(${testname} ${Boost_LIBRARIES} gtest gtest_main)
+    add_test(${testname} ${testname})
+endforeach(testsourcefile ${TEST_TARGETS})
