@@ -50,7 +50,7 @@ df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(2.2, "world"s, 40),
                             std::make_tuple(2.2, "world"s, 40),  
-                            std::make_tuple(1.1, "bili"s, 50)}, 
+                            std::make_tuple(1.1, "test"s, 50)}, 
                             {"double_vec", "str_vec", "int_vec"});
 auto df3 = combine_inner<double>(df1, df2, "double_vec", 
                                 std::tuple<double, long>{}, {"double_vec", "long_vec"},
@@ -67,7 +67,7 @@ df5.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(2.2, "world"s, 40),
                             std::make_tuple(2.2, "world"s, 40),  
-                            std::make_tuple(1.1, "bili"s, 50)}, 
+                            std::make_tuple(1.1, "github"s, 50)}, 
                             {"double_vec", "str_vec", "int_vec"});
 auto df6 = intersect(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
 ```
