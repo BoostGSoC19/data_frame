@@ -28,14 +28,13 @@ For `data_frame`, it can support multiple relational operations or set operation
 ```
 using type_collection = type_list<double, long>::types;
 data_frame df = type_collection{};
-df.from_tuples(std::vector{std::make_tuple(3.3, 10L), 
+df.from_tuples(std::vector{ std::make_tuple(3.3, 10L), 
                             std::make_tuple(2.2, 40L), 
                             std::make_tuple(1.1, 50L)}, 
-                {"double_vec", "long_vec"});
+                            {"double_vec", "long_vec"});
 auto cur_view = df.select<long>("long_vec", [](long curVal) {
                         return curVal >= 40;
-                    })
-                    .apply_with_index({0, 1, 2}, [](auto& t) {
+                    }).apply_with_index({0, 1, 2}, [](auto& t) {
                         return t * 2;
                     });
 ```
@@ -54,9 +53,12 @@ df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(2.2, "world"s, 40),  
                             std::make_tuple(1.1, "test"s, 50)}, 
                             {"double_vec", "str_vec", "int_vec"});
-auto df3 = combine_inner<double>(df1, df2, "double_vec", 
-                                std::tuple<double, long>{}, {"double_vec", "long_vec"},
-                                std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+auto df3 = combine_inner<double>(df1, df2, 
+                                "double_vec", 
+                                std::tuple<double, long>{}, 
+                                {"double_vec", "long_vec"},
+                                std::tuple<double, std::string, int>{}, 
+                                {"double_vec", "str_vec", "int_vec"});
 ```
 ### set operation to get common rows for df4 and df5
 ```
