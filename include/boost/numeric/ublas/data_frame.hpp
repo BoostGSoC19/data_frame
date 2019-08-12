@@ -1522,43 +1522,101 @@ public:
         for (int i = 0; i < len; i++)
             internal_index.push_back(index(i));
     }
+   /** @brief change existing value for specific indexes
+    * 
+    * @tparam F the functor type for applying
+    * 
+    * @param index the index for using the applying the computation
+    * 
+    * @param f the functor to compute new value
+    */   
     template<typename F>
     data_frame_view<Types...>& apply_with_index(const std::vector<int>& index, F f) {
         data_frame_ptr->apply_with_index(index, f);
         return *this;
     }
+    /** @brief print for specific indexes
+    * 
+    * @param index the index for printing
+    */   
     void print_with_index(const std::vector<int>& index) {
         data_frame_ptr->print_with_index(index);
     }
+    /** @brief print for specific indexes
+    * 
+    * @param index the range for printing
+    */   
     void print_with_range(const range& index) {
         data_frame_ptr->print_with_range(index);
     }
+    /** @brief print for specific indexes
+    * 
+    * @param index the slice for printing
+    */   
     void print_with_slice(const slice& index) {
         data_frame_ptr->print_with_slice(index);
     }
+   /** @brief create a view with new row orders after sort
+    * 
+    * @tparam T the column type to be filtered
+    * 
+    * @param col_name the column name applying the condition
+    */   
     template<typename T>
     data_frame_view<Types...>& sort(const std::string& col_name) {
         static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame_view");
         data_frame_ptr->data_frame<Types...>::template sort<T>(col_name);
         return *this;
     }
+   /** @brief create a view with new row orders after sort
+    * 
+    * @tparam T the column type to be filtered
+    * 
+    * @tparam F a functor for condition
+    * 
+    * @param col_name the column name applying the condition
+    * 
+    * @param f a functor for condition
+    */   
     template<typename T, typename F>
     data_frame_view<Types...>& sort(const std::string& col_name, F f) {
         static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame_view");
         data_frame_ptr->data_frame<Types...>::template sort<T>(col_name, f);
         return *this;
     }
+    /** @brief create a view with rows only satisfying a condition 
+    * 
+    * @tparam T the column type to be filtered
+    * 
+    * @tparam F a functor for condition
+    * 
+    * @param col_name the column name applying the condition
+    * 
+    * @param f a functor for condition
+    */   
     template<typename T, typename F>
     data_frame_view<Types...>& select(const std::string& col_name, F f) {
         static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame_view");
         data_frame_ptr->data_frame<Types...>::template select<T>(col_name, f);
         return *this;
     }
+    /** @brief return data with at pos row in col_name position
+    *
+    * @tparam T the type for col_name column 
+    *  
+    * @param pos row position
+    */   
     template<typename T>
     T& get(const std::string& col_name, size_t pos) {
         static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame_view");
         return data_frame_ptr->data_frame<Types...>::template get<T>(col_name, pos);
     }
+    /** @brief return const data with at pos row in col_name position
+    *
+    * @tparam T the type for col_name column 
+    *  
+    * @param pos row position
+    */   
     template<typename T>
     const T& get_c(const std::string& col_name, size_t pos) {
         static_assert(((std::is_same_v<T, Types> || ...)), "Type doesn't match to data_frame_view");
