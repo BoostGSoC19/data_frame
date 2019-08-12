@@ -348,7 +348,7 @@ public:
         }
         return new_df;
     }
-   /** @brief change existing value for specific indexes
+    /** @brief change existing value for specific indexes
     * 
     * @tparam F the functor type for applying
     * 
@@ -365,7 +365,7 @@ public:
             });
         }
     }
-   /** @brief print for specific indexes
+    /** @brief print for specific indexes
     * 
     * @param index the index for printing
     */   
@@ -380,7 +380,7 @@ public:
         }
         std::cout << std::endl;
     }
-   /** @brief print for specific indexes
+    /** @brief print for specific indexes
     * 
     * @param index the range for printing
     */   
@@ -394,7 +394,7 @@ public:
             std::cout << '\n';
         }
     }
-   /** @brief print for specific indexes
+    /** @brief print for specific indexes
     * 
     * @param index the slice for printing
     */   
@@ -408,6 +408,32 @@ public:
             std::cout << '\n';
         }
     }
+    /** @brief inner join two data frames on specific column 
+    * 
+    * @tparam T the type of the column to be joined
+    * 
+    * @tparam Types2... the template argument for another data_frame
+    * 
+    * @tparam TypeLists1 the type container for current data_frame 
+    * 
+    * @tparam InnerTypes1... the types for current data_frame
+    * 
+    * @tparam TypeLists2 the type conatiner for the second data_frame
+    * 
+    * @tparam InnerTypes2... the types for the second data_frame
+    * 
+    * @param other another data_frame to be joined
+    * 
+    * @param col_name the name of column to be joined on
+    * 
+    * @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+    * 
+    * @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+    * 
+    * @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+    * 
+    * @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+    */      
     template<typename T,
                         typename... Types2, 
                         template<class...> class TypeLists1, typename... InnerTypes1, 
@@ -416,6 +442,32 @@ public:
         const std::string& col_name, 
         TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
         TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    /** @brief left join two data frames on specific column 
+    * 
+    * @tparam T the type of the column to be joined
+    * 
+    * @tparam Types2... the template argument for another data_frame
+    * 
+    * @tparam TypeLists1 the type container for current data_frame 
+    * 
+    * @tparam InnerTypes1... the types for current data_frame
+    * 
+    * @tparam TypeLists2 the type conatiner for the second data_frame
+    * 
+    * @tparam InnerTypes2... the types for the second data_frame
+    * 
+    * @param other another data_frame to be joined
+    * 
+    * @param col_name the name of column to be joined on
+    * 
+    * @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+    * 
+    * @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+    * 
+    * @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+    * 
+    * @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+    */   
     template<typename T,
                         typename... Types2, 
                         template<class...> class TypeLists1, typename... InnerTypes1, 
@@ -424,6 +476,32 @@ public:
         const std::string& col_name, 
         TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
         TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    /** @brief right join two data frames on specific column 
+    * 
+    * @tparam T the type of the column to be joined
+    * 
+    * @tparam Types2... the template argument for another data_frame
+    * 
+    * @tparam TypeLists1 the type container for current data_frame 
+    * 
+    * @tparam InnerTypes1... the types for current data_frame
+    * 
+    * @tparam TypeLists2 the type conatiner for the second data_frame
+    * 
+    * @tparam InnerTypes2... the types for the second data_frame
+    * 
+    * @param other another data_frame to be joined
+    * 
+    * @param col_name the name of column to be joined on
+    * 
+    * @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+    * 
+    * @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+    * 
+    * @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+    * 
+    * @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+    */   
     template<typename T,
                         typename... Types2, 
                         template<class...> class TypeLists1, typename... InnerTypes1, 
@@ -432,6 +510,32 @@ public:
         const std::string& col_name, 
         TypeLists1<InnerTypes1...>, const std::vector<std::string>& colnamesl, 
         TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr);
+    /** @brief full join two data frames on specific column 
+    * 
+    * @tparam T the type of the column to be joined
+    * 
+    * @tparam Types2... the template argument for another data_frame
+    * 
+    * @tparam TypeLists1 the type container for current data_frame 
+    * 
+    * @tparam InnerTypes1... the types for current data_frame
+    * 
+    * @tparam TypeLists2 the type conatiner for the second data_frame
+    * 
+    * @tparam InnerTypes2... the types for the second data_frame
+    * 
+    * @param other another data_frame to be joined
+    * 
+    * @param col_name the name of column to be joined on
+    * 
+    * @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+    * 
+    * @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+    * 
+    * @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+    * 
+    * @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+    */   
     template<typename T,
                         typename... Types2, 
                         template<class...> class TypeLists1, typename... InnerTypes1, 
@@ -939,7 +1043,36 @@ auto make_from_tuples(const std::vector<TypeLists<InnerTypes...>>& t, const std:
         df->from_tuple(t[i], names, i);
     return df;
 }
-
+/** @brief inner join two data frames on specific column 
+* 
+* @tparam T the type of the column to be joined
+* 
+* @tparam Types1... the template argument for left data_frame
+*
+* @tparam Types2... the template argument for right data_frame
+* 
+* @tparam TypeLists1 the type container for left data_frame 
+* 
+* @tparam InnerTypes1... the types for left data_frame
+* 
+* @tparam TypeLists2 the type conatiner for right data_frame
+* 
+* @tparam InnerTypes2... the types for right data_frame
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param col_name the name of column to be joined on
+* 
+* @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+* 
+* @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+* 
+* @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+* 
+* @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+*/      
 template<typename T,
                     typename... Types1, 
                     typename... Types2, 
@@ -990,6 +1123,36 @@ auto combine_inner(const data_frame<Types1...>& l, const data_frame<Types2...>& 
     auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
     return new_df;
 }
+/** @brief left join two data frames on specific column 
+* 
+* @tparam T the type of the column to be joined
+* 
+* @tparam Types1... the template argument for left data_frame
+*
+* @tparam Types2... the template argument for right data_frame
+* 
+* @tparam TypeLists1 the type container for left data_frame 
+* 
+* @tparam InnerTypes1... the types for left data_frame
+* 
+* @tparam TypeLists2 the type conatiner for right data_frame
+* 
+* @tparam InnerTypes2... the types for right data_frame
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param col_name the name of column to be joined on
+* 
+* @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+* 
+* @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+* 
+* @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+* 
+* @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+*/  
 template<typename T,
                     typename... Types1, 
                     typename... Types2, 
@@ -1052,6 +1215,36 @@ auto combine_left(const data_frame<Types1...>& l, const data_frame<Types2...>& r
     auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
     return new_df;
 }
+/** @brief right join two data frames on specific column 
+* 
+* @tparam T the type of the column to be joined
+* 
+* @tparam Types1... the template argument for left data_frame
+*
+* @tparam Types2... the template argument for right data_frame
+* 
+* @tparam TypeLists1 the type container for left data_frame 
+* 
+* @tparam InnerTypes1... the types for left data_frame
+* 
+* @tparam TypeLists2 the type conatiner for right data_frame
+* 
+* @tparam InnerTypes2... the types for right data_frame
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param col_name the name of column to be joined on
+* 
+* @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+* 
+* @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+* 
+* @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+* 
+* @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+*/  
 template<typename T,
                     typename... Types1, 
                     typename... Types2, 
@@ -1063,6 +1256,36 @@ auto combine_right(const data_frame<Types1...>& l, const data_frame<Types2...>& 
     TypeLists2<InnerTypes2...>, const std::vector<std::string>& colnamesr) {
     return combine_left<T>(r, l, col_name, TypeLists2<InnerTypes2...>{}, colnamesr, TypeLists1<InnerTypes1...>{}, colnamesl);
 }
+/** @brief full join two data frames on specific column 
+* 
+* @tparam T the type of the column to be joined
+* 
+* @tparam Types1... the template argument for left data_frame
+*
+* @tparam Types2... the template argument for right data_frame
+* 
+* @tparam TypeLists1 the type container for left data_frame 
+* 
+* @tparam InnerTypes1... the types for left data_frame
+* 
+* @tparam TypeLists2 the type conatiner for right data_frame
+* 
+* @tparam InnerTypes2... the types for right data_frame
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param col_name the name of column to be joined on
+* 
+* @param TypeLists1<InnerTypes1...> used to deduct tuple type for current data_frame
+* 
+* @param colnamesl the corresponding column names for each type position in TypeLists1<InnerTypes1...>
+* 
+* @param TypeLists2<InnerTypes2...> used to deduct tuple type for second data_frame
+* 
+* @param colnamesr the corresponding column names for each type position in TypeLists2<InnerTypes2...>
+*/  
 template<typename T,
                     typename... Types1, 
                     typename... Types2, 
@@ -1139,6 +1362,22 @@ auto combine_full(const data_frame<Types1...>& l, const data_frame<Types2...>& r
     auto new_df = make_from_tuples(new_tuple_vec, col_names, tuple_cat_val);
     return new_df;
 }
+/** @brief row intersect of two data_frames with the same type
+*
+* @tparam Types... the template argument for data_frames
+* 
+* @tparam TypeLists the type container for data_frame 
+* 
+* @tparam InnerTypes... the types for data_frame tuple
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param TypeLists<InnerTypes...> used to deduct tuple type for current data_frame
+* 
+* @param colnames the corresponding column names for each type position in TypeLists<InnerTypes...>
+*/  
 template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
 auto intersect(const data_frame<Types...>& l, const data_frame<Types...>& r, 
     TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
@@ -1164,6 +1403,22 @@ auto intersect(const data_frame<Types...>& l, const data_frame<Types...>& r,
     }
     return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
 }
+/** @brief the tuples containing in l data_frame but don't exist in r data_frame
+*
+* @tparam Types... the template argument for data_frames
+* 
+* @tparam TypeLists the type container for data_frame 
+* 
+* @tparam InnerTypes... the types for data_frame tuple
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param TypeLists<InnerTypes...> used to deduct tuple type for current data_frame
+* 
+* @param colnames the corresponding column names for each type position in TypeLists<InnerTypes...>
+*/  
 template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
 auto setdiff(const data_frame<Types...>& l, const data_frame<Types...>& r, 
     TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
@@ -1194,6 +1449,22 @@ auto setdiff(const data_frame<Types...>& l, const data_frame<Types...>& r,
     }
     return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
 }
+/** @brief the tuples containing in l data_frame or exist in r data_frame
+*
+* @tparam Types... the template argument for data_frames
+* 
+* @tparam TypeLists the type container for data_frame 
+* 
+* @tparam InnerTypes... the types for data_frame tuple
+* 
+* @param l the data_frame on left 
+*
+* @param r the data_frame on right
+* 
+* @param TypeLists<InnerTypes...> used to deduct tuple type for current data_frame
+* 
+* @param colnames the corresponding column names for each type position in TypeLists<InnerTypes...>
+*/  
 template<typename... Types, template<class...> class TypeLists, typename... InnerTypes>
 auto setunion(const data_frame<Types...>& l, const data_frame<Types...>& r, 
     TypeLists<InnerTypes...>, const std::vector<std::string>& colnames) {
@@ -1217,8 +1488,9 @@ auto setunion(const data_frame<Types...>& l, const data_frame<Types...>& r,
     std::vector<std::tuple<InnerTypes...>> interset_tuples(complete_tuples_set.begin(), complete_tuples_set.end());
     return make_from_tuples(interset_tuples, col_names, TypeLists<InnerTypes...>{});
 }
-/**
- * `data_frame_view` only contains the column index to the underlying `data_frame`
+/** @brief data_frame_view represents a view of data_frame, and it only contains row index in original data_frame
+ * 
+ * @tparam Types... represent a non-repeated types from all data_frame
  */
 template<class... Types>
 class data_frame_view {
