@@ -60,7 +60,7 @@ auto df3 = combine_inner<double>(df1, df2,
                                 std::tuple<double, std::string, int>{}, 
                                 {"double_vec", "str_vec", "int_vec"});
 ```
-### set operation to get common rows for df4 and df5
+### row set intersect
 ```
 using type_collection = type_list<std::string, int, double>::types;
 data_frame df1 = type_collection{};
