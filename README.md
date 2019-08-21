@@ -75,5 +75,7 @@ df2.from_tuples(std::vector{std::make_tuple(3.3, "hello"s, 10),
                             std::make_tuple(2.2, "world"s, 40),  
                             std::make_tuple(1.1, "github"s, 50)}, 
                             {"double_vec", "str_vec", "int_vec"});
-auto df3 = intersect(df1, df2, std::tuple<double, std::string, int>{}, {"double_vec", "str_vec", "int_vec"});
+auto df3 = intersect(df1, df2, 
+                    std::tuple<double, std::string, int>{}, 
+                    {"double_vec", "str_vec", "int_vec"});
 ```
